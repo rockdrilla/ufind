@@ -94,7 +94,7 @@ static void _ulist_grow_by_size(ulist_t * list, size_t length)
 	if (length == 0)
 		return;
 
-	size_t old_alloc = list->item * list->allocated;
+	size_t old_alloc = (size_t) list->item * (size_t) list->allocated;
 	size_t new_alloc = _ulist_align_alloc(old_alloc + length, ulist_memblock);
 	old_alloc = _ulist_align_alloc(old_alloc, ulist_memblock);
 	if (new_alloc <= old_alloc)
@@ -105,7 +105,7 @@ static void _ulist_grow_by_size(ulist_t * list, size_t length)
 		return;
 
 	list->ptr = new_ptr;
-	list->allocated = new_alloc / list->item;
+	list->allocated = new_alloc / (size_t) list->item;
 	memset(_ulist_item_ptr(list, list->used), 0, list->item * (list->allocated - list->used));
 }
 
