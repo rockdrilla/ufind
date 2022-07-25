@@ -34,6 +34,39 @@ Program is very dumb, so feel free to open issue/PR. :)
 - error-prone to TOCTOU (insanely large window), that's why it's safely usable only while building container images
 - much slower than [sharkdp/fd](https://github.com/sharkdp/fd) :(
 
+## Benchmark:
+
+```sh
+$ ./benchmark.sh
+
+find /usr/share/: 283348
+./ufind-terse.sh /usr/share/: 235353
+./ufind /usr/share/: 235353
+./ufind /usr/share/: 235353
+fdfind -u -j 1 . /usr/share/: 283347
+fdfind -u . /usr/share/: 283347
+
+Benchmark 1: ./ufind-terse.sh /usr/share
+  Time (mean ± σ):     10.559 s ±  0.075 s    [User: 9.500 s, System: 3.019 s]
+  Range (min … max):   10.422 s … 10.713 s    10 runs
+
+Benchmark 1: ./ufind /usr/share
+  Time (mean ± σ):      1.710 s ±  0.055 s    [User: 0.759 s, System: 0.942 s]
+  Range (min … max):    1.643 s …  1.808 s    50 runs
+
+Benchmark 1: ./ufind /usr/share
+  Time (mean ± σ):      2.047 s ±  0.058 s    [User: 0.771 s, System: 1.265 s]
+  Range (min … max):    1.960 s …  2.142 s    50 runs
+
+Benchmark 1: fdfind -u -j 1 . /usr/share
+  Time (mean ± σ):     269.5 ms ±  13.9 ms    [User: 233.6 ms, System: 192.4 ms]
+  Range (min … max):   245.0 ms … 318.2 ms    50 runs
+
+Benchmark 1: fdfind -u . /usr/share
+  Time (mean ± σ):     119.6 ms ±   0.8 ms    [User: 502.2 ms, System: 1052.1 ms]
+  Range (min … max):   118.3 ms … 121.5 ms    50 runs
+```
+
 ## Building from source:
 
 Only "standard" things are required: binutils, gcc and libc6-dev.
