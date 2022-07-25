@@ -374,7 +374,7 @@ static int resolve_fd(int fd, char * buffer, size_t buffer_size)
 static void dump_error(int error_num, const char * where)
 {
 	char        * e_str = NULL;
-	static char   e_buf[4096];
+	static char   e_buf[8192];
 
 	memset(&e_buf, 0, sizeof(e_buf));
 	e_str = strerror_r(error_num, e_buf, sizeof(e_buf) - 1);
@@ -384,7 +384,7 @@ static void dump_error(int error_num, const char * where)
 static void dump_path_error(int error_num, const char * where, const char * name)
 {
 	char        * e_str = NULL;
-	static char   e_buf[4096];
+	static char   e_buf[8192];
 
 	memset(&e_buf, 0, sizeof(e_buf));
 	e_str = strerror_r(error_num, e_buf, sizeof(e_buf) - 1);
