@@ -105,7 +105,7 @@ static void detect_work_method(void)
 	use_lists = 1;
 }
 
-typedef struct { char path[32768]; } path;
+typedef struct { char path[4096]; } path;
 
 /* "work" lists */
 ulist_t * work_current;
