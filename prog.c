@@ -154,7 +154,7 @@ static void process_dir(dev_t dev, ino_t ino, const char * name);
 
 static void process_arg(const char * arg)
 {
-	int f_fd = open(arg, O_RDONLY | O_PATH | O_NOATIME);
+	int f_fd = open(arg, O_RDONLY | O_PATH);
 	if (f_fd < 0) {
 		dump_path_error(errno, "process_arg:open(2)", arg);
 		return;
