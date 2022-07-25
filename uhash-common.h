@@ -106,27 +106,35 @@ static inline uhash_idx_t uhash_node_rela_index(uhash_idx_t selector, uhash_idx_
 #define _UHASH_TYPEPROC_CMP_KEY_PTR(user_t, key_t) \
 	typedef int (* UHASH_T(user_t, key_cmp) ) (const key_t * key1, const key_t * key2);
 
-#define _UHASH_PROC__NODE(user_t) \
+#define _UHASH_PROC_NODE(user_t) \
 	static inline UHASH_T(user_t, node) * \
 	UHASH_P(user_t, _node) (user_t * hash, uhash_idx_t index) { \
 		return ulist_get(&hash->nodes, _uhash_idx_int(index)); \
-	}
-
-#define _UHASH_PROC_NODE(user_t) \
+	} \
+	\
 	static UHASH_T(user_t, node) * \
 	UHASH_P(user_t, node) (user_t * hash, uhash_idx_t node_index) { \
 		return (node_index == 0) ? NULL : UHASH_C(user_t, _node, hash, node_index); \
+	} \
+	static inline const UHASH_T(user_t, node) * \
+	UHASH_P(user_t, _cnode) (const user_t * hash, uhash_idx_t index) { \
+		return ulist_get(&hash->nodes, _uhash_idx_int(index)); \
+	} \
+	\
+	static const UHASH_T(user_t, node) * \
+	UHASH_P(user_t, cnode) (const user_t * hash, uhash_idx_t node_index) { \
+		return (node_index == 0) ? NULL : UHASH_C(user_t, _cnode, hash, node_index); \
 	}
 
 #define _UHASH_PROC_RELA_INDEX(user_t) \
-	static uhash_idx_t * \
-	UHASH_P(user_t, rela_index) (user_t * hash, uhash_idx_t index) { \
+	static const uhash_idx_t * \
+	UHASH_P(user_t, rela_index) (const user_t * hash, uhash_idx_t index) { \
 		uhash_idx_t selector = _uhash_idx_selector(index); \
 		switch (selector) { \
 		case UHASH_NODE_SELECTOR_ROOT: \
 			return &(hash->tree_root); \
 		} \
-		UHASH_T(user_t, node) * node = UHASH_C(user_t, node, hash, _uhash_idx_truindex(index)); \
+		const UHASH_T(user_t, node) * node = UHASH_C(user_t, cnode, hash, _uhash_idx_truindex(index)); \
 		if (node == NULL) \
 			return NULL; \
 		switch (selector) { \
@@ -139,56 +147,56 @@ static inline uhash_idx_t uhash_node_rela_index(uhash_idx_t selector, uhash_idx_
 	}
 
 #define _UHASH_PROC_RELA_NODE(user_t) \
-	static UHASH_T(user_t, node) * \
-	UHASH_P(user_t, rela_node) (user_t * hash, uhash_idx_t index) { \
+	static const UHASH_T(user_t, node) * \
+	UHASH_P(user_t, rela_node) (const user_t * hash, uhash_idx_t index) { \
 		uhash_idx_t selector = _uhash_idx_selector(index); \
 		switch (selector) { \
 		case UHASH_NODE_SELECTOR_ROOT: \
-			return UHASH_C(user_t, node, hash, hash->tree_root); \
+			return UHASH_C(user_t, cnode, hash, hash->tree_root); \
 		} \
-		UHASH_T(user_t, node) * node = UHASH_C(user_t, node, hash, _uhash_idx_truindex(index)); \
+		const UHASH_T(user_t, node) * node = UHASH_C(user_t, cnode, hash, _uhash_idx_truindex(index)); \
 		if (node == NULL) \
 			return NULL; \
 		switch (selector) { \
 		case UHASH_NODE_SELECTOR_LEFT: \
-			return UHASH_C(user_t, node, hash, node->left); \
+			return UHASH_C(user_t, cnode, hash, node->left); \
 		case UHASH_NODE_SELECTOR_RIGHT: \
-			return UHASH_C(user_t, node, hash, node->right); \
+			return UHASH_C(user_t, cnode, hash, node->right); \
 		} \
 		return node; \
 	}
 
 #define _UHASH_PROC_LEFT(user_t) \
 	static uhash_idx_t \
-	UHASH_P(user_t, left) (user_t * hash, uhash_idx_t node_index) { \
-		UHASH_T(user_t, node) * node = UHASH_C(user_t, node, hash, node_index); \
+	UHASH_P(user_t, left) (const user_t * hash, uhash_idx_t node_index) { \
+		const UHASH_T(user_t, node) * node = UHASH_C(user_t, cnode, hash, node_index); \
 		return (node == NULL) ? 0 : node->left; \
 	}
 
 #define _UHASH_PROC_RIGHT(user_t) \
 	static uhash_idx_t \
-	UHASH_P(user_t, right) (user_t * hash, uhash_idx_t node_index) { \
-		UHASH_T(user_t, node) * node = UHASH_C(user_t, node, hash, node_index); \
+	UHASH_P(user_t, right) (const user_t * hash, uhash_idx_t node_index) { \
+		const UHASH_T(user_t, node) * node = UHASH_C(user_t, cnode, hash, node_index); \
 		return (node == NULL) ? 0 : node->right; \
 	}
 
 #define _UHASH_PROC_DEPTH(user_t) \
 	static int \
-	UHASH_P(user_t, depth) (user_t * hash, uhash_idx_t node_index) { \
-		UHASH_T(user_t, node) * node = UHASH_C(user_t, node, hash, node_index); \
+	UHASH_P(user_t, depth) (const user_t * hash, uhash_idx_t node_index) { \
+		const UHASH_T(user_t, node) * node = UHASH_C(user_t, cnode, hash, node_index); \
 		return (node == NULL) ? 0 : node->depth; \
 	}
 
 #define _UHASH_PROC_TREE_DEPTH(user_t) \
 	static int \
-	UHASH_P(user_t, tree_depth) (user_t * hash) { \
+	UHASH_P(user_t, tree_depth) (const user_t * hash) { \
 		return UHASH_C(user_t, depth, hash, hash->tree_root); \
 	}
 
 #define _UHASH_PROC_BALANCE_FACTOR(user_t) \
 	static int \
-	UHASH_P(user_t, balance_factor) (user_t * hash, uhash_idx_t node_index) { \
-		UHASH_T(user_t, node) * node = UHASH_C(user_t, node, hash, node_index); \
+	UHASH_P(user_t, balance_factor) (const user_t * hash, uhash_idx_t node_index) { \
+		const UHASH_T(user_t, node) * node = UHASH_C(user_t, cnode, hash, node_index); \
 		if (node == NULL) \
 			return 0; \
 		int d_left  = UHASH_C(user_t, depth, hash, node->left); \
@@ -323,12 +331,12 @@ static inline uhash_idx_t uhash_node_rela_index(uhash_idx_t selector, uhash_idx_
 		ulist_t branch; \
 		ulist_init(&branch, sizeof(uhash_idx_t)); \
 		while (1) { \
-			node_index_ptr = UHASH_C(user_t, rela_index, hash, idx_rela); \
+			node_index_ptr = (uhash_idx_t *) UHASH_C(user_t, rela_index, hash, idx_rela); \
 			if (*node_index_ptr == 0) { \
 				uhash_idx_t i = ulist_append(&hash->nodes, NULL); \
 				node = ulist_get(&hash->nodes, i); \
 				UHASH_C(user_t, _init_node, hash, node, key, value); \
-				node_index_ptr = UHASH_C(user_t, rela_index, hash, idx_rela); \
+				node_index_ptr = (uhash_idx_t *) UHASH_C(user_t, rela_index, hash, idx_rela); \
 				*node_index_ptr = _uhash_idx_pub(i); \
 				break; \
 			} \
@@ -343,11 +351,12 @@ static inline uhash_idx_t uhash_node_rela_index(uhash_idx_t selector, uhash_idx_
 				idx_rela = uhash_node_rela_index(UHASH_NODE_SELECTOR_LEFT, *node_index_ptr); \
 		} \
 		uhash_idx_t * a; \
+		uhash_idx_t * b; \
 		for (uhash_idx_t i = branch.used; i != 0; i--) { \
 			a = ulist_get(&branch, i - 1); \
-			node_index_ptr = UHASH_C(user_t, rela_index, hash, *a); \
-			UHASH_C(user_t, rebalance, hash, node_index_ptr); \
-			UHASH_C(user_t, update_depth, hash, *node_index_ptr); \
+			b = (uhash_idx_t *) UHASH_C(user_t, rela_index, hash, *a); \
+			UHASH_C(user_t, rebalance, hash, b); \
+			UHASH_C(user_t, update_depth, hash, *b); \
 		} \
 		ulist_free(&branch); \
 		return *node_index_ptr; \

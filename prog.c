@@ -222,7 +222,7 @@ static void process_file(dev_t dev, ino_t ino, const char * name)
 		i_dev = UHASH_CALL(uh_dev_ino_name, insert, &filenames, dev, &empty);
 	}
 
-	uh_ino_name * h_ino = UHASH_CALL(uh_dev_ino_name, value, &filenames, i_dev);
+	uh_ino_name * h_ino = (uh_ino_name *) UHASH_CALL(uh_dev_ino_name, value, &filenames, i_dev);
 	uhash_idx_t i_ino = UHASH_CALL(uh_ino_name, search, h_ino, ino);
 	if (i_ino != 0) {
 		return;
@@ -249,7 +249,7 @@ static void process_dir(dev_t dev, ino_t ino, const char * name)
 		i_dev = UHASH_CALL(uh_dev_ino, insert, &visited_dirs, dev, &empty);
 	}
 
-	uh_ino * h_ino = UHASH_CALL(uh_dev_ino, value, &visited_dirs, i_dev);
+	uh_ino * h_ino = (uh_ino *) UHASH_CALL(uh_dev_ino, value, &visited_dirs, i_dev);
 	uhash_idx_t i_ino = UHASH_CALL(uh_ino, search, h_ino, ino);
 	if (i_ino != 0) {
 		return;

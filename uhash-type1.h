@@ -30,41 +30,29 @@
 	_UHASH_TYPEIMPL__TYPE0(user_t)
 
 
-#define _UHASH_PROC__KEY__TYPE1(user_t, key_t) \
-	_UHASH_PROC__KEY__TYPE0(user_t, key_t)
-
 #define _UHASH_PROC_KEY__TYPE1(user_t, key_t) \
 	_UHASH_PROC_KEY__TYPE0(user_t, key_t)
 
-#define _UHASH_PROC__SET_KEY__TYPE1(user_t, key_t) \
-	_UHASH_PROC__SET_KEY__TYPE0(user_t, key_t)
-
-#define _UHASH_PROC_SET_KEY__TYPE1(user_t, key_t) \
-	_UHASH_PROC_SET_KEY__TYPE0(user_t, key_t)
-
-
-#define _UHASH_PROC__VALUE__TYPE1(user_t, value_t) \
-	static inline value_t \
-	UHASH_P(user_t, _value) (user_t * hash, UHASH_T(user_t, node) * node) { \
-		return node->value; \
-	}
 
 #define _UHASH_PROC_VALUE__TYPE1(user_t, value_t) \
-	static value_t * \
-	UHASH_P(user_t, value) (user_t * hash, uhash_idx_t node_index) { \
-		UHASH_T(user_t, node) * node = UHASH_C(user_t, node, hash, node_index); \
+	static inline value_t \
+	UHASH_P(user_t, _value) (const user_t * hash, const UHASH_T(user_t, node) * node) { \
+		return node->value; \
+	} \
+	\
+	static const value_t * \
+	UHASH_P(user_t, value) (const user_t * hash, uhash_idx_t node_index) { \
+		const UHASH_T(user_t, node) * node = UHASH_C(user_t, cnode, hash, node_index); \
 		if (node == NULL) \
 			return NULL; \
 		return &(node->value); \
-	}
-
-#define _UHASH_PROC__SET_VALUE__TYPE1(user_t, value_t) \
+	} \
+	\
 	static inline void \
 	UHASH_P(user_t, _set_value) (user_t * hash, UHASH_T(user_t, node) * node, value_t value) { \
 		node->value = value; \
-	}
-
-#define _UHASH_PROC_SET_VALUE__TYPE1(user_t, value_t) \
+	} \
+	\
 	static void \
 	UHASH_P(user_t, set_value) (user_t * hash, uhash_idx_t node_index, value_t value) { \
 		UHASH_T(user_t, node) * node = UHASH_C(user_t, node, hash, node_index); \
@@ -118,18 +106,9 @@
 		_UHASH_TYPEIMPL__TYPE1(user_t) \
 	} user_t; \
 	\
-	_UHASH_PROC__NODE(user_t) \
 	_UHASH_PROC_NODE(user_t) \
-	\
-	_UHASH_PROC__KEY__TYPE1(user_t, key_t) \
 	_UHASH_PROC_KEY__TYPE1(user_t, key_t) \
-	_UHASH_PROC__SET_KEY__TYPE1(user_t, key_t) \
-	_UHASH_PROC_SET_KEY__TYPE1(user_t, key_t) \
-	\
-	_UHASH_PROC__VALUE__TYPE1(user_t, value_t) \
 	_UHASH_PROC_VALUE__TYPE1(user_t, value_t) \
-	_UHASH_PROC__SET_VALUE__TYPE1(user_t, value_t) \
-	_UHASH_PROC_SET_VALUE__TYPE1(user_t, value_t) \
 	\
 	_UHASH_PROC__INIT_NODE__TYPE1(user_t, key_t, value_t) \
 	_UHASH_PROC__NODE_VISITOR__TYPE1(user_t) \

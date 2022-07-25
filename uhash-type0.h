@@ -31,28 +31,25 @@
 	UHASH_T(user_t, key_cmp)  key_comparator;
 
 
-#define _UHASH_PROC__KEY__TYPE0(user_t, key_t) \
-	static inline key_t \
-	UHASH_P(user_t, _key) (user_t * hash, UHASH_T(user_t, node) * node) { \
-		return node->key; \
-	}
-
 #define _UHASH_PROC_KEY__TYPE0(user_t, key_t) \
-	static key_t * \
-	UHASH_P(user_t, key) (user_t * hash, uhash_idx_t node_index) { \
-		UHASH_T(user_t, node) * node = UHASH_C(user_t, node, hash, node_index); \
+	static inline key_t \
+	UHASH_P(user_t, _key) (const user_t * hash, const UHASH_T(user_t, node) * node) { \
+		return node->key; \
+	} \
+	\
+	static const key_t * \
+	UHASH_P(user_t, key) (const user_t * hash, uhash_idx_t node_index) { \
+		const UHASH_T(user_t, node) * node = UHASH_C(user_t, cnode, hash, node_index); \
 		if (node == NULL) \
 			return NULL; \
 		return &(node->key); \
-	}
-
-#define _UHASH_PROC__SET_KEY__TYPE0(user_t, key_t) \
+	} \
+	\
 	static inline void \
 	UHASH_P(user_t, _set_key) (user_t * hash, UHASH_T(user_t, node) * node, key_t key) { \
 		node->key = key; \
-	}
-
-#define _UHASH_PROC_SET_KEY__TYPE0(user_t, key_t) \
+	} \
+	\
 	static void \
 	UHASH_P(user_t, set_key) (user_t * hash, uhash_idx_t node_index, key_t key) { \
 		UHASH_T(user_t, node) * node = UHASH_C(user_t, node, hash, node_index); \
@@ -62,14 +59,13 @@
 	}
 
 
-#define _UHASH_PROC__INIT_NODE_REAL__TYPE0(user_t, key_t) \
+#define _UHASH_PROC__INIT_NODE__TYPE0(user_t, key_t) \
 	static inline void \
 	UHASH_P(user_t, _init_node_real) (user_t * hash, UHASH_T(user_t, node) * node, key_t key) { \
 		node->depth = 1; \
 		UHASH_C(user_t, _set_key, hash, node, key); \
-	}
-
-#define _UHASH_PROC__INIT_NODE__TYPE0(user_t, key_t) \
+	} \
+	\
 	static inline void \
 	UHASH_P(user_t, _init_node) (user_t * hash, UHASH_T(user_t, node) * node, key_t key, void * value) { \
 		UHASH_C(user_t, _init_node_real, hash, node, key); \
@@ -129,15 +125,9 @@
 		_UHASH_TYPEIMPL__TYPE0(user_t) \
 	} user_t; \
 	\
-	_UHASH_PROC__NODE(user_t) \
 	_UHASH_PROC_NODE(user_t) \
-	\
-	_UHASH_PROC__KEY__TYPE0(user_t, key_t) \
 	_UHASH_PROC_KEY__TYPE0(user_t, key_t) \
-	_UHASH_PROC__SET_KEY__TYPE0(user_t, key_t) \
-	_UHASH_PROC_SET_KEY__TYPE0(user_t, key_t) \
 	\
-	_UHASH_PROC__INIT_NODE_REAL__TYPE0(user_t, key_t) \
 	_UHASH_PROC__INIT_NODE__TYPE0(user_t, key_t) \
 	_UHASH_PROC__NODE_VISITOR__TYPE0(user_t) \
 	_UHASH_PROC_INIT__TYPE0(user_t) \

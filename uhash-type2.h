@@ -33,41 +33,29 @@
 	UHASH_T(user_t, value_proc)  value_destructor;
 
 
-#define _UHASH_PROC__KEY__TYPE2(user_t, key_t) \
-	_UHASH_PROC__KEY__TYPE1(user_t, key_t)
-
 #define _UHASH_PROC_KEY__TYPE2(user_t, key_t) \
 	_UHASH_PROC_KEY__TYPE1(user_t, key_t)
 
-#define _UHASH_PROC__SET_KEY__TYPE2(user_t, key_t) \
-	_UHASH_PROC__SET_KEY__TYPE1(user_t, key_t)
-
-#define _UHASH_PROC_SET_KEY__TYPE2(user_t, key_t) \
-	_UHASH_PROC_SET_KEY__TYPE1(user_t, key_t)
-
-
-#define _UHASH_PROC__RAW_VALUE__TYPE2(user_t, value_t) \
-	static inline value_t * \
-	UHASH_P(user_t, _raw_value) (user_t * hash, uhash_idx_t index) { \
-		return ulist_get(&hash->values, _uhash_idx_int(index)); \
-	}
-
-#define _UHASH_PROC__VALUE__TYPE2(user_t, value_t) \
-	static inline value_t * \
-	UHASH_P(user_t, _value) (user_t * hash, UHASH_T(user_t, node) * node) { \
-		return (node->value == 0) ? NULL : UHASH_C(user_t, _raw_value, hash, node->value); \
-	}
 
 #define _UHASH_PROC_VALUE__TYPE2(user_t, value_t) \
-	static value_t * \
-	UHASH_P(user_t, value) (user_t * hash, uhash_idx_t node_index) { \
-		UHASH_T(user_t, node) * node = UHASH_C(user_t, node, hash, node_index); \
+	static inline const value_t * \
+	UHASH_P(user_t, _raw_value) (const user_t * hash, uhash_idx_t index) { \
+		return ulist_get(&hash->values, _uhash_idx_int(index)); \
+	} \
+	\
+	static inline const value_t * \
+	UHASH_P(user_t, _value) (const user_t * hash, const UHASH_T(user_t, node) * node) { \
+		return (node->value == 0) ? NULL : UHASH_C(user_t, _raw_value, hash, node->value); \
+	} \
+	\
+	static const value_t * \
+	UHASH_P(user_t, value) (const user_t * hash, uhash_idx_t node_index) { \
+		const UHASH_T(user_t, node) * node = UHASH_C(user_t, cnode, hash, node_index); \
 		if (node == NULL) \
 			return NULL; \
 		return UHASH_C(user_t, _value, hash, node); \
-	}
-
-#define _UHASH_PROC__SET_VALUE__TYPE2(user_t, value_t) \
+	} \
+	\
 	static void \
 	UHASH_P(user_t, _set_value) (user_t * hash, UHASH_T(user_t, node) * node, value_t * value) { \
 		uhash_idx_t i; \
@@ -94,9 +82,8 @@
 			if (hash->value_constructor != NULL) \
 				hash->value_constructor(v); \
 		} \
-	}
-
-#define _UHASH_PROC_SET_VALUE__TYPE2(user_t, value_t) \
+	} \
+	\
 	static void \
 	UHASH_P(user_t, set_value) (user_t * hash, uhash_idx_t node_index, value_t * value) { \
 		UHASH_T(user_t, node) * node = UHASH_C(user_t, node, hash, node_index); \
@@ -169,19 +156,9 @@
 		_UHASH_TYPEIMPL__TYPE2(user_t) \
 	} user_t; \
 	\
-	_UHASH_PROC__NODE(user_t) \
 	_UHASH_PROC_NODE(user_t) \
-	\
-	_UHASH_PROC__KEY__TYPE2(user_t, key_t) \
 	_UHASH_PROC_KEY__TYPE2(user_t, key_t) \
-	_UHASH_PROC__SET_KEY__TYPE2(user_t, key_t) \
-	_UHASH_PROC_SET_KEY__TYPE2(user_t, key_t) \
-	\
-	_UHASH_PROC__RAW_VALUE__TYPE2(user_t, value_t) \
-	_UHASH_PROC__VALUE__TYPE2(user_t, value_t) \
 	_UHASH_PROC_VALUE__TYPE2(user_t, value_t) \
-	_UHASH_PROC__SET_VALUE__TYPE2(user_t, value_t) \
-	_UHASH_PROC_SET_VALUE__TYPE2(user_t, value_t) \
 	\
 	_UHASH_PROC__INIT_NODE__TYPE2(user_t, key_t, value_t) \
 	_UHASH_PROC__NODE_VISITOR__TYPE2(user_t) \
