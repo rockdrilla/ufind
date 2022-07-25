@@ -220,6 +220,7 @@ static void process_file(dev_t dev, ino_t ino, const char * name)
 		return;
 	}
 
+	UHASH_CALL(uh_ino, insert, h_ino, ino);
 	fputs(name, stdout);
 	fputc(entry_separator, stdout);
 }
