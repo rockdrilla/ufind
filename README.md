@@ -28,7 +28,6 @@ Program is very dumb, so feel free to open issue/PR. :)
 
 - beats shell script variant by speed (see below)
 - much smaller than [sharkdp/fd](https://github.com/sharkdp/fd) :)
-- supports \0 delimiter in output ([sharkdp/fd](https://github.com/sharkdp/fd) as of version 8.4.0 - does not)
 
 ## Cons:
 
