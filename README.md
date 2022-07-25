@@ -51,12 +51,12 @@ Benchmark 1: ./ufind-terse.sh /usr/share
   Range (min … max):   10.422 s … 10.713 s    10 runs
 
 Benchmark 1: ./ufind /usr/share
-  Time (mean ± σ):      1.710 s ±  0.055 s    [User: 0.759 s, System: 0.942 s]
-  Range (min … max):    1.643 s …  1.808 s    50 runs
+  Time (mean ± σ):     944.0 ms ±  22.2 ms    [User: 202.8 ms, System: 736.1 ms]
+  Range (min … max):   910.4 ms … 1015.0 ms    50 runs
 
 Benchmark 1: ./ufind /usr/share
-  Time (mean ± σ):      2.047 s ±  0.058 s    [User: 0.771 s, System: 1.265 s]
-  Range (min … max):    1.960 s …  2.142 s    50 runs
+  Time (mean ± σ):      1.306 s ±  0.031 s    [User: 0.259 s, System: 1.040 s]
+  Range (min … max):    1.263 s …  1.364 s    50 runs
 
 Benchmark 1: fdfind -u -j 1 . /usr/share
   Time (mean ± σ):     269.5 ms ±  13.9 ms    [User: 233.6 ms, System: 192.4 ms]

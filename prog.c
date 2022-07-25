@@ -51,8 +51,6 @@ static void process_pending_work(void);
 
 static void process_arg(const char * arg);
 
-static void output_result(void);
-
 static char entry_separator = '\n';
 static int use_lists = 0;
 
@@ -85,8 +83,6 @@ int main(int argc, char * argv[])
 			process_arg(argv[i]);
 		}
 	}
-
-	output_result();
 
 	return 0;
 }
@@ -202,33 +198,30 @@ err_close_file:
 	return;
 }
 
-/* file names */
-UHASH_DEFINE__TYPE2(uh_ino_name, ino_t, path);
-UHASH_DEFINE__TYPE2(uh_dev_ino_name, dev_t, uh_ino_name);
-
-/* "visited" directories */
+/* "visited" entries */
 UHASH_DEFINE__TYPE0(uh_ino, ino_t);
 UHASH_DEFINE__TYPE2(uh_dev_ino, dev_t, uh_ino);
 
-static uh_dev_ino_name filenames;
+static uh_dev_ino filenames;
 static uh_dev_ino visited_dirs;
 
 static void process_file(dev_t dev, ino_t ino, const char * name)
 {
-	uhash_idx_t i_dev = UHASH_CALL(uh_dev_ino_name, search, &filenames, dev);
+	uhash_idx_t i_dev = UHASH_CALL(uh_dev_ino, search, &filenames, dev);
 	if (i_dev == 0) {
-		uh_ino_name empty;
+		uh_ino empty;
 		memset(&empty, 0, sizeof(empty));
-		i_dev = UHASH_CALL(uh_dev_ino_name, insert, &filenames, dev, &empty);
+		i_dev = UHASH_CALL(uh_dev_ino, insert, &filenames, dev, &empty);
 	}
 
-	uh_ino_name * h_ino = (uh_ino_name *) UHASH_CALL(uh_dev_ino_name, value, &filenames, i_dev);
-	uhash_idx_t i_ino = UHASH_CALL(uh_ino_name, search, h_ino, ino);
+	uh_ino * h_ino = (uh_ino *) UHASH_CALL(uh_dev_ino, value, &filenames, i_dev);
+	uhash_idx_t i_ino = UHASH_CALL(uh_ino, search, h_ino, ino);
 	if (i_ino != 0) {
 		return;
 	}
 
-	UHASH_CALL(uh_ino_name, insert, h_ino, ino, (path *) name);
+	fputs(name, stdout);
+	fputc(entry_separator, stdout);
 }
 
 static int filter_out_dots(const struct dirent * entry)
@@ -288,46 +281,8 @@ static void process_dir(dev_t dev, ino_t ino, const char * name)
 	free(tmpname);
 }
 
-static int output_walker1(dev_t key, const uh_ino_name * value);
-static int output_walker2(ino_t key, const char * value);
-
-static void output_result(void)
-{
-	if (fflush(stdout) == EOF) {
-		return;
-	}
-
-	UHASH_CALL(uh_dev_ino_name, walk, &filenames, output_walker1);
-}
-
-static int output_walker1(dev_t key, const uh_ino_name * value)
-{
-	UHASH_CALL(uh_ino_name, walk, value, (UHASH_T(uh_ino_name, node_proc)) output_walker2);
-	return 0;
-}
-
-static int output_walker2(ino_t key, const char * value)
-{
-	fputs(value, stdout);
-	fputc(entry_separator, stdout);
-	return 0;
-}
-
 UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(dev_t);
 UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(ino_t);
-
-static int uh_ino_name__ctor(uh_ino_name * hash)
-{
-	UHASH_CALL(uh_ino_name, init, hash);
-	UHASH_SET_DEFAULT_KEY_COMPARATOR(hash, ino_t);
-	return 0;
-}
-
-static int uh_ino_name__dtor(uh_ino_name * hash)
-{
-	UHASH_CALL(uh_ino_name, free, hash);
-	return 0;
-}
 
 static int uh_ino__ctor(uh_ino * hash)
 {
@@ -349,9 +304,9 @@ static void prepare_internals(void)
 		ulist_init(work_pending, sizeof(path));
 	}
 
-	UHASH_CALL(uh_dev_ino_name, init, &filenames);
+	UHASH_CALL(uh_dev_ino, init, &filenames);
 	UHASH_SET_DEFAULT_KEY_COMPARATOR(&filenames, dev_t);
-	UHASH_SET_VALUE_HANDLERS(&filenames, uh_ino_name__ctor, uh_ino_name__dtor);
+	UHASH_SET_VALUE_HANDLERS(&filenames, uh_ino__ctor, uh_ino__dtor);
 
 	UHASH_CALL(uh_dev_ino, init, &visited_dirs);
 	UHASH_SET_DEFAULT_KEY_COMPARATOR(&visited_dirs, dev_t);
