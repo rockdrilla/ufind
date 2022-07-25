@@ -18,12 +18,12 @@
 /* ref:
  * - https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
  */
-#define _ULIST_POPCNT_R0(v)     ((v) - (((v) >> 1) & 0x55555555u))
-#define _ULIST_POPCNT_R1(v)     ((_ULIST_POPCNT_R0(v) & 0x33333333u) + ((_ULIST_POPCNT_R0(v) >> 2) & 0x33333333u))
-#define _ULIST_POPCNT_R2(v)     (((_ULIST_POPCNT_R1(v) + ((_ULIST_POPCNT_R1(v) >> 4) & 0xF0F0F0Fu)) * 0x1010101u) >> 24)
-#define _ULIST_POPCNT_MACRO(v)  _ULIST_POPCNT_R2(v)
+#define _POPCNT_R0(v)     ((v) - (((v) >> 1) & 0x55555555u))
+#define _POPCNT_R1(v)     ((_POPCNT_R0(v) & 0x33333333u) + ((_POPCNT_R0(v) >> 2) & 0x33333333u))
+#define _POPCNT_R2(v)     (((_POPCNT_R1(v) + ((_POPCNT_R1(v) >> 4) & 0xF0F0F0Fu)) * 0x1010101u) >> 24)
+#define _POPCNT_MACRO(v)  _POPCNT_R2(v)
 
-static inline int _ulist_popcnt_bithacks(size_t n)
+static inline int _popcnt_bithacks(size_t n)
 {
 	/* ref:
 	 * - https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
@@ -48,7 +48,7 @@ static inline int _ulist_popcnt_bithacks(size_t n)
   #define _ULIST_BUILTIN_POPCNT(n)  __builtin_popcountl(n)
 #endif
 
-static int _ulist_popcnt(size_t n)
+static int _popcnt(size_t n)
 {
 	/* ref:
 	 * - https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
@@ -60,7 +60,7 @@ static int _ulist_popcnt(size_t n)
 		return _ULIST_BUILTIN_POPCNT(n);
 #endif
 
-	return _ulist_popcnt_bithacks(n);
+	return _popcnt_bithacks(n);
 }
 
 #endif /* POPCNT_H */

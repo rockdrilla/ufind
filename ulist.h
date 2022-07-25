@@ -46,7 +46,7 @@ typedef struct {
 typedef void (*ulist_item_visitor) (const void * value, ulist_idx_t index);
 
 static const size_t ulist_memblock
-	= (_ULIST_POPCNT_MACRO(ULIST_MEMBLOCK) == 1)
+	= (_POPCNT_MACRO(ULIST_MEMBLOCK) == 1)
 	? (ULIST_MEMBLOCK)
 	: _ULIST_MEMBLOCK_DEFAULT;
 
@@ -59,7 +59,7 @@ static size_t _ulist_align_alloc(size_t length, size_t align)
 {
 	if (align == 0)
 		return 0;
-	if (_ulist_popcnt(align) == 1) {
+	if (_popcnt(align) == 1) {
 		size_t mask = align - 1;
 		return (length & ~mask) + (((length & mask) != 0) ? align : 0);
 	}

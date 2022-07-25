@@ -73,7 +73,7 @@ static const int _uhash_avl_right = 1;
 static inline uhash_idx_t _uhash_idx_int(uhash_idx_t idx) { return (idx - 1); }
 static inline uhash_idx_t _uhash_idx_pub(uhash_idx_t idx) { return (idx + 1); }
 
-#define _UHASH_IDX_T__WIDTH          (_ULIST_POPCNT_MACRO(((ULIST_IDX_T) ~0)))
+#define _UHASH_IDX_T__WIDTH          (_POPCNT_MACRO(((ULIST_IDX_T) ~0)))
 #define _UHASH_IDX_T__SELECTOR_BITS  2
 #define _UHASH_IDX_T__TRUINDEX_BITS  (_UHASH_IDX_T__WIDTH - _UHASH_IDX_T__SELECTOR_BITS)
 
