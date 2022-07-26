@@ -42,17 +42,10 @@ static void usage(void)
 	);
 }
 
-static void detect_work_method(void);
-
 static void prepare_internals(void);
-static void propagate_args(int argc, char * argv[]);
-static int has_pending_work(void);
-static void process_pending_work(void);
-
 static void process_arg(const char * arg);
 
 static char entry_separator = '\n';
-static int use_lists = 0;
 
 int main(int argc, char * argv[])
 {
@@ -70,93 +63,41 @@ int main(int argc, char * argv[])
 		argc--; argv++;
 	}
 
-	detect_work_method();
 	prepare_internals();
 
-	if (use_lists == 1) {
-		propagate_args(argc, argv);
-		while (has_pending_work() != 0) {
-			process_pending_work();
-		}
-	} else {
-		for (int i = 0; i < argc; i++) {
-			process_arg(argv[i]);
-		}
+	for (int i = 0; i < argc; i++) {
+		process_arg(argv[i]);
 	}
 
 	return 0;
 }
 
-static void detect_work_method(void)
-{
-	use_lists = 0;
-
-	const char * env = getenv("UFIND_USE_LISTS");
-	if (env == NULL)
-		return;
-
-	if (strlen(env) == 0)
-		return;
-
-	use_lists = 1;
-}
-
 typedef struct { char path[4096]; } path;
 
-/* "work" lists */
-ulist_t * work_current;
-ulist_t * work_pending;
+/* "visited" entries */
+UHASH_DEFINE__TYPE0(uh_ino, ino_t);
+UHASH_DEFINE__TYPE2(uh_dev_ino, dev_t, uh_ino);
 
-static void propagate_args(int argc, char * argv[])
-{
-	int i;
-	ulist_idx_t k;
-	for (i = 0; i < argc; i++) {
-		k = ulist_append(work_pending, NULL);
-		strcpy(ulist_get(work_pending, k), argv[i]);
-	}
-}
+UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(dev_t);
+UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(ino_t);
 
-static int has_pending_work(void)
-{
-	return (work_pending->used != 0) ? 1 : 0;
-}
-
-static void process_item(const char * arg, ulist_idx_t index);
-
-static void process_pending_work(void)
-{
-	work_current = work_pending;
-	work_pending = malloc(sizeof(ulist_t));
-	ulist_init(work_pending, sizeof(path));
-
-	ulist_walk(work_current, (ulist_item_visitor) process_item);
-
-	ulist_free(work_current);
-	free(work_current);
-	work_current = NULL;
-}
-
-static void process_item(const char * arg, ulist_idx_t index)
-{
-	process_arg(arg);
-}
+static uh_dev_ino filenames;
+static uh_dev_ino visited_dirs;
 
 static void dump_error(int error_num, const char * where);
 static void dump_path_error(int error_num, const char * where, const char * name);
 
-static int handle_file_type(mode_t type, const char * arg);
-static int handle_direntry_type(uint type, const char * arg);
-static int resolve_fd(int fd, char * buffer, size_t buffer_size);
-
 static void process_file(dev_t dev, ino_t ino, const char * name);
 static void process_dir(dev_t dev, ino_t ino, const char * name);
 
-static void process_arg(const char * arg)
+static int handle_file_type(mode_t type, const char * arg);
+static int resolve_fd(int fd, char * buffer, size_t buffer_size);
+
+static void process_arg(const char * name)
 {
-	int f_fd = open(arg, O_RDONLY | O_PATH);
+	int f_fd = open(name, O_RDONLY | O_PATH);
 	if (f_fd < 0) {
-		dump_path_error(errno, "process_arg:open(2)", arg);
+		dump_path_error(errno, "process_arg:open(2)", name);
 		return;
 	}
 
@@ -164,46 +105,40 @@ static void process_arg(const char * arg)
 	memset(&f_stat, 0, sizeof(f_stat));
 
 	if (fstat(f_fd, &f_stat) < 0) {
-		dump_path_error(errno, "process_arg:fstat(2)", arg);
-		goto err_close_file;
+		dump_path_error(errno, "process_arg:fstat(2)", name);
+		goto process_arg__close;
 	}
 
-	if (handle_file_type(f_stat.st_mode, arg) == 0) {
-		goto err_close_file;
+	if (handle_file_type(f_stat.st_mode, name) == 0) {
+		goto process_arg__close;
 	}
 
-	char * name = calloc(1, sizeof(path));
-	if (resolve_fd(f_fd, name, sizeof(path)) == 0) {
-		goto err_free_buffers;
+	char * tname = calloc(1, sizeof(path));
+	if (resolve_fd(f_fd, tname, sizeof(path)) == 0) {
+		goto process_arg__free;
 	}
 
-	close(f_fd);
+	close(f_fd); f_fd = -1;
 
 	switch (f_stat.st_mode & S_IFMT) {
-	case S_IFREG: process_file(f_stat.st_dev, f_stat.st_ino, name) ; break;
-	case S_IFDIR: process_dir(f_stat.st_dev, f_stat.st_ino, name) ; break;
+	case S_IFREG: process_file(f_stat.st_dev, f_stat.st_ino, tname); break;
+	case S_IFDIR: process_dir(f_stat.st_dev, f_stat.st_ino, tname); break;
 	}
 
-	free(name);
+process_arg__free:
 
-	return;
+	if (tname != NULL) {
+		free(tname);
+	}
 
-err_free_buffers:
+process_arg__close:
 
-	free(name);
+	if (f_fd >= 0) {
+		close(f_fd);
+	}
 
-err_close_file:
-
-	close(f_fd);
 	return;
 }
-
-/* "visited" entries */
-UHASH_DEFINE__TYPE0(uh_ino, ino_t);
-UHASH_DEFINE__TYPE2(uh_dev_ino, dev_t, uh_ino);
-
-static uh_dev_ino filenames;
-static uh_dev_ino visited_dirs;
 
 static void process_file(dev_t dev, ino_t ino, const char * name)
 {
@@ -221,16 +156,30 @@ static void process_file(dev_t dev, ino_t ino, const char * name)
 	}
 
 	UHASH_CALL(uh_ino, insert, h_ino, ino);
+
 	fputs(name, stdout);
 	fputc(entry_separator, stdout);
 }
 
-static int filter_out_dots(const struct dirent * entry)
+static inline int filter_out_dots(const struct dirent * entry)
 {
+	/*
 	if (strcmp(entry->d_name, ".") == 0)
 		return 0;
 	if (strcmp(entry->d_name, "..") == 0)
 		return 0;
+	return 1;
+	*/
+
+	if (entry->d_name[0] != '.')
+		return 1;
+	if (entry->d_name[1] == 0)
+		return 0;
+	if (entry->d_name[1] != '.')
+		return 1;
+	if (entry->d_name[2] == 0)
+		return 0;
+
 	return 1;
 }
 
@@ -249,41 +198,42 @@ static void process_dir(dev_t dev, ino_t ino, const char * name)
 		return;
 	}
 
-	struct dirent ** e_list;
-	int e_count = scandir(name, &e_list, filter_out_dots, NULL);
-	if (e_count < 0) {
-		dump_path_error(errno, "process_dir:scandir(3)", name);
-		return;
-	}
-
 	UHASH_CALL(uh_ino, insert, h_ino, ino);
 
-	char * tmpname = malloc(sizeof(path));
-
-	for (int i = 0; i < e_count; i++) {
-		memset(tmpname, 0, sizeof(path));
-		snprintf(tmpname, sizeof(path) - 1, "%s/%s", name, e_list[i]->d_name);
-
-		if (handle_direntry_type(e_list[i]->d_type, tmpname) == 0) {
-			goto free_list_entry;
-		}
-
-		if (use_lists == 1) {
-			ulist_append(work_pending, tmpname);
-		} else {
-			process_arg(tmpname);
-		}
-
-	free_list_entry:
-		free(e_list[i]);
+	DIR * d = opendir(name);
+	if (d == NULL) {
+		dump_path_error(errno, "process_dir:opendir(3)", name);
+		return;
 	}
-	free(e_list);
+	
+	char * tname = malloc(sizeof(path));
 
-	free(tmpname);
+	struct dirent * dent;
+	while ((dent = readdir(d)) != NULL) {
+		if (filter_out_dots(dent) == 0) {
+			continue;
+		}
+
+		memset(tname, 0, sizeof(path));
+		snprintf(tname, sizeof(path) - 1, "%s/%s", name, dent->d_name);
+
+		switch (dent->d_type) {
+		case DT_REG:
+			process_file(dev, dent->d_ino, tname);
+			break;
+		case DT_DIR:
+			process_dir(dev, dent->d_ino, tname);
+			break;
+		case DT_LNK:
+			process_arg(tname);
+			break;
+		}
+	}
+
+	free(tname);
+
+	closedir(d);
 }
-
-UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(dev_t);
-UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(ino_t);
 
 static int uh_ino__ctor(uh_ino * hash)
 {
@@ -300,11 +250,6 @@ static int uh_ino__dtor(uh_ino * hash)
 
 static void prepare_internals(void)
 {
-	if (use_lists == 1) {
-		work_pending = malloc(sizeof(ulist_t));
-		ulist_init(work_pending, sizeof(path));
-	}
-
 	UHASH_CALL(uh_dev_ino, init, &filenames);
 	UHASH_SET_DEFAULT_KEY_COMPARATOR(&filenames, dev_t);
 	UHASH_SET_VALUE_HANDLERS(&filenames, uh_ino__ctor, uh_ino__dtor);
@@ -325,28 +270,6 @@ static int handle_file_type(mode_t type, const char * arg)
 	case S_IFIFO:  e_type = "FIFO"; break;
 	case S_IFLNK:  e_type = "symbolic link"; break;
 	case S_IFSOCK: e_type = "socket"; break;
-	default:       e_type = "unknown entry type"; break;
-	}
-
-	if (e_type != NULL) {
-		fprintf(stderr, "can't handle <%s>, skipping %s\n", e_type, arg);
-		return 0;
-	}
-
-	return 1;
-}
-
-static int handle_direntry_type(uint type, const char * arg)
-{
-	const char * e_type = NULL;
-	switch (type) {
-	case DT_REG:   break;
-	case DT_DIR:   break;
-	case DT_LNK:   break;
-	case DT_BLK:   e_type = "block device"; break;
-	case DT_CHR:   e_type = "character device"; break;
-	case DT_FIFO:  e_type = "FIFO"; break;
-	case DT_SOCK:  e_type = "socket"; break;
 	default:       e_type = "unknown entry type"; break;
 	}
 

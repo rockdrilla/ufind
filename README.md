@@ -18,12 +18,6 @@ Program is very dumb, so feel free to open issue/PR. :)
 | ------ | -------------------------------------- |
 |  `-z`  | separate entries with \0 instead of \n |
 
-### Environment variables:
-
-| Variable          | Value           | Description                                                  |
-| ----------------- | --------------- | ------------------------------------------------------------ |
-| `UFIND_USE_LISTS` | (any non-empty) | use work lists instead of stack recursion - slower but safer |
-
 ## Pros:
 
 - beats shell script variant by speed (see below)
@@ -31,7 +25,7 @@ Program is very dumb, so feel free to open issue/PR. :)
 
 ## Cons:
 
-- error-prone to TOCTOU (insanely large window), that's why it's safely usable only while building container images
+- error-prone to TOCTOU, that's why it's safely usable only while building container images
 - much slower than [sharkdp/fd](https://github.com/sharkdp/fd) :(
 
 ## Benchmark:
@@ -39,32 +33,27 @@ Program is very dumb, so feel free to open issue/PR. :)
 ```sh
 $ ./benchmark.sh
 
-find /usr/share/: 283348
-./ufind-terse.sh /usr/share/: 235353
-./ufind /usr/share/: 235353
-./ufind /usr/share/: 235353
-fdfind -u -j 1 . /usr/share/: 283347
-fdfind -u . /usr/share/: 283347
+find /usr/share/: 283379
+./ufind-terse.sh /usr/share/: 235382
+./ufind /usr/share/: 235382
+fdfind -u -j 1 . /usr/share/: 283378
+fdfind -u . /usr/share/: 283378
 
 Benchmark 1: ./ufind-terse.sh /usr/share
-  Time (mean ± σ):     10.559 s ±  0.075 s    [User: 9.500 s, System: 3.019 s]
-  Range (min … max):   10.422 s … 10.713 s    10 runs
+  Time (mean ± σ):      3.791 s ±  0.025 s    [User: 3.793 s, System: 0.655 s]
+  Range (min … max):    3.757 s …  3.821 s    10 runs
 
 Benchmark 1: ./ufind /usr/share
-  Time (mean ± σ):     944.0 ms ±  22.2 ms    [User: 202.8 ms, System: 736.1 ms]
-  Range (min … max):   910.4 ms … 1015.0 ms    50 runs
-
-Benchmark 1: ./ufind /usr/share
-  Time (mean ± σ):      1.306 s ±  0.031 s    [User: 0.259 s, System: 1.040 s]
-  Range (min … max):    1.263 s …  1.364 s    50 runs
+  Time (mean ± σ):     693.0 ms ±  28.9 ms    [User: 509.9 ms, System: 181.6 ms]
+  Range (min … max):   664.0 ms … 738.1 ms    50 runs
 
 Benchmark 1: fdfind -u -j 1 . /usr/share
-  Time (mean ± σ):     269.5 ms ±  13.9 ms    [User: 233.6 ms, System: 192.4 ms]
-  Range (min … max):   245.0 ms … 318.2 ms    50 runs
+  Time (mean ± σ):     245.6 ms ±   5.0 ms    [User: 212.2 ms, System: 174.1 ms]
+  Range (min … max):   239.1 ms … 259.1 ms    50 runs
 
 Benchmark 1: fdfind -u . /usr/share
-  Time (mean ± σ):     119.6 ms ±   0.8 ms    [User: 502.2 ms, System: 1052.1 ms]
-  Range (min … max):   118.3 ms … 121.5 ms    50 runs
+  Time (mean ± σ):     120.0 ms ±   1.0 ms    [User: 535.8 ms, System: 1021.7 ms]
+  Range (min … max):   116.9 ms … 121.5 ms    50 runs
 ```
 
 ## Building from source:
@@ -75,7 +64,7 @@ Only "standard" things are required: binutils, gcc and libc6-dev.
 
 ## Shell script alternative:
 
-simple but slow
+simple but slow (ref: [`ufind-terse.sh`](ufind-terse.sh))
 
 ```sh
 #!/bin/sh

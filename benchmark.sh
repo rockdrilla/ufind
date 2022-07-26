@@ -13,7 +13,6 @@ simple_test find ## kind of warmup
 simple_test ./ufind-terse.sh
 
 simple_test ./ufind
-UFIND_USE_LISTS=1 simple_test ./ufind
 
 simple_test fdfind -u -j 1 .
 simple_test fdfind -u .
@@ -25,7 +24,6 @@ hyper_test() {
 RUNS=10 hyper_test ./ufind-terse.sh
 
 hyper_test ./ufind
-UFIND_USE_LISTS=1 hyper_test ./ufind
 
 hyper_test fdfind -u -j 1 .
 hyper_test fdfind -u .
