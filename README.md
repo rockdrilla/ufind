@@ -1,12 +1,85 @@
 ## About
 
-`ufind` enumerates unique (from `dev_t:ino_t` logic) files and output their names to `stdout`.
+`ufind` enumerates unique files and output their names to `stdout`.
 
-`ufind` is small supplemental utility for [minimal Debian container image](https://github.com/rockdrilla/docker-debian) (work in progress) and mostly useful for building container images (`RUN <...>` stanzas in `Dockerfile`/`Containerfile`).
+`ufind` is small supplemental utility for [minimal Debian container image](https://github.com/rockdrilla/docker-debian) (*work in progress*) and mostly useful for building container images (`RUN <...>` stanzas in `Dockerfile`/`Containerfile`).
 
-Program is very dumb, so feel free to open issue/PR. :)
+Program is kinda *dumb* so feel free to open issue/PR. :)
 
 ---
+
+## How it works:
+
+`ufind` treats `dev_t:ino_t` as "unique identifier" for files and directories.
+
+`ufind` iterates through each argument:
+
+- argument is symlink:
+  - determine underlying file system object type with `open(2)`/`fstat(2)`
+  - call appropriate handler
+
+> `ufind` handles command line arguments as they were symlinks.
+
+- argument is neither regular file nor directory (e.g. devices, sockets, etc.):
+  - print warning to `stderr`
+
+- argument is regular file:
+  - it's identifier is seen first time:
+    - remember identifier
+    - print (full) file name to `stdout`
+  - it's identifier is already known:
+    - do nothing (file is already handled)
+
+- argument is directory:
+  - it's identifier is seen first time:
+    - remember identifier
+    - iterate it's members and handle them accordingly
+  - it's identifier is already known:
+    - do nothing (directory is already handled)
+
+Nota bene: there's no sorting of any kind (directory entries or output)
+so consecutive calls against same file system MAY produce different output.
+
+### Example:
+
+Consider following tree:
+
+```sh
+  $ find * | sort -V | xargs -r stat -c '%A %d:%i %N'
+
+  drwxr-xr-x 36:31 'dir1'
+  -rw-r--r-- 36:34 'dir1/file1'
+  lrwxrwxrwx 36:41 'dir1/link1' -> 'file1'
+  lrwxrwxrwx 36:44 'dir1/link2' -> '../dir2/dir3/file2'
+  drwxr-xr-x 36:32 'dir2'
+  drwxr-xr-x 36:33 'dir2/dir3'
+  -rw-r--r-- 36:36 'dir2/dir3/file2'
+  -rw-r--r-- 36:34 'dir2/dir3/hardlink2'
+  lrwxrwxrwx 36:28 'dir2/dir3/link3' -> '../file3'
+  -rw-r--r-- 36:27 'dir2/file3'
+  -rw-r--r-- 36:27 'dir2/hardlink1'
+```
+
+`ufind` produces following output:
+
+```sh
+  $ ufind *
+
+  /tmp/ufind-example/dir1/file1
+  /tmp/ufind-example/dir2/hardlink1
+  /tmp/ufind-example/dir2/dir3/file2
+
+  $ ufind * | sort -V | xargs -r stat -c '%A %d:%i %N'
+
+  -rw-r--r-- 36:34 '/tmp/ufind-example/dir1/file1'
+  -rw-r--r-- 36:36 '/tmp/ufind-example/dir2/dir3/file2'
+  -rw-r--r-- 36:27 '/tmp/ufind-example/dir2/hardlink1'
+```
+
+As seen, output MAY be totally unsorted and a bit confusing:
+
+- `'dir2/hardlink1'` was printed instead of `'dir2/file3'` because it has "arrived" first (both files are "hardlinks");
+- `'dir2/dir3/file2'` was printed after `'dir2/hardlink1'`.
 
 ## Usage:
 
