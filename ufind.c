@@ -29,6 +29,7 @@
 static void usage(void)
 {
 	fprintf(stderr,
+		"ufind 0.2.0\n"
 		"Usage: ufind [-z] <path> [..<path>]\n"
 		"  -z  - separate entries with \\0 instead of \\n\n"
 	);
