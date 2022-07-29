@@ -2,8 +2,6 @@ cmake_minimum_required( VERSION 3.0 )
 
 project( ufind LANGUAGES C )
 
-set( CMAKE_INCLUDE_CURRENT_DIR ON )
-
 set( PROJECT_SOURCES
     ufind.c
     popcnt.h
