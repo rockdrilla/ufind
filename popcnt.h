@@ -5,7 +5,7 @@
  * - https://gcc.gnu.org/onlinedocs/gcc/x86-Built-in-Functions.html
  * - https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
  *
- * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-License-Identifier: Apache-2.0
  * (c) 2022, Konstantin Demin
  */
 

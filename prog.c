@@ -1,6 +1,6 @@
 /* ufind: simple find(1) replacement with destination uniqueness checks
  *
- * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-License-Identifier: Apache-2.0
  * (c) 2022, Konstantin Demin
  *
  * Rough alternative (but slow):

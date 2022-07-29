@@ -1,4 +1,6 @@
 #!/bin/sh
+## SPDX-License-Identifier: Apache-2.0
+## (c) 2022, Konstantin Demin
 for i ; do
     [ -n "$i" ] || continue
     if [ -f "$i" ] ; then
