@@ -131,9 +131,19 @@ Benchmark 1: fdfind -u . /usr/share
 
 ## Building from source:
 
-Only "standard" things are required: binutils, gcc and libc6-dev.
+Note: clone repository **recursively** (due to `git submodule`)
 
-`gcc -o ufind ufind.c`
+```sh
+git clone --recurse-submodules https://github.com/rockdrilla/ufind.git
+```
+
+Build dependencies: `gcc` and `libc6-dev`.
+
+*They're quite common for building software from sources.*
+
+```sh
+gcc -O2 -o ufind ufind.c
+```
 
 ## Shell script alternative:
 

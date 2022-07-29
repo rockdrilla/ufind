@@ -24,7 +24,7 @@
 
 #include <sys/stat.h>
 
-#include "uhash.h"
+#include "include/uhash/uhash.h"
 
 static void usage(void)
 {
