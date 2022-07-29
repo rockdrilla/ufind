@@ -60,7 +60,7 @@ Benchmark 1: fdfind -u . /usr/share
 
 Only "standard" things are required: binutils, gcc and libc6-dev.
 
-`gcc -o ufind prog.c`
+`gcc -o ufind ufind.c`
 
 ## Shell script alternative:
 

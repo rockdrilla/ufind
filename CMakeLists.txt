@@ -5,7 +5,7 @@ project( ufind LANGUAGES C )
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 
 set( PROJECT_SOURCES
-    prog.c
+    ufind.c
     popcnt.h
     ulist.h
     uhash.h
