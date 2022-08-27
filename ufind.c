@@ -74,6 +74,8 @@ UHASH_DEFINE__TYPE2(uh_dev_ino, dev_t, uh_ino);
 UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(dev_t);
 UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(ino_t);
 
+static uh_ino empty_ino;
+
 static uh_dev_ino filenames;
 static uh_dev_ino visited_dirs;
 
@@ -102,12 +104,12 @@ static void process_arg(const char * name)
 		goto process_arg__close;
 	}
 
-	if (handle_file_type(f_stat.st_mode, name) == 0) {
+	if (!handle_file_type(f_stat.st_mode, name)) {
 		goto process_arg__close;
 	}
 
 	char * tname = calloc(1, sizeof(path));
-	if (resolve_fd(f_fd, tname, sizeof(path)) == 0) {
+	if (!resolve_fd(f_fd, tname, sizeof(path))) {
 		goto process_arg__free;
 	}
 
@@ -120,7 +122,7 @@ static void process_arg(const char * name)
 
 process_arg__free:
 
-	if (tname != NULL) {
+	if (tname) {
 		free(tname);
 	}
 
@@ -136,15 +138,13 @@ process_arg__close:
 static void process_file(dev_t dev, ino_t ino, const char * name)
 {
 	uhash_idx_t i_dev = UHASH_CALL(uh_dev_ino, search, &filenames, dev);
-	if (i_dev == 0) {
-		uh_ino empty;
-		memset(&empty, 0, sizeof(empty));
-		i_dev = UHASH_CALL(uh_dev_ino, insert, &filenames, dev, &empty);
+	if (!i_dev) {
+		i_dev = UHASH_CALL(uh_dev_ino, insert, &filenames, dev, &empty_ino);
 	}
 
 	uh_ino * h_ino = (uh_ino *) UHASH_CALL(uh_dev_ino, value, &filenames, i_dev);
 	uhash_idx_t i_ino = UHASH_CALL(uh_ino, search, h_ino, ino);
-	if (i_ino != 0) {
+	if (i_ino) {
 		return;
 	}
 
@@ -179,22 +179,20 @@ static inline int filter_out_dots(const struct dirent * entry)
 static void process_dir(dev_t dev, ino_t ino, const char * name)
 {
 	uhash_idx_t i_dev = UHASH_CALL(uh_dev_ino, search, &visited_dirs, dev);
-	if (i_dev == 0) {
-		uh_ino empty;
-		memset(&empty, 0, sizeof(empty));
-		i_dev = UHASH_CALL(uh_dev_ino, insert, &visited_dirs, dev, &empty);
+	if (!i_dev) {
+		i_dev = UHASH_CALL(uh_dev_ino, insert, &visited_dirs, dev, &empty_ino);
 	}
 
 	uh_ino * h_ino = (uh_ino *) UHASH_CALL(uh_dev_ino, value, &visited_dirs, i_dev);
 	uhash_idx_t i_ino = UHASH_CALL(uh_ino, search, h_ino, ino);
-	if (i_ino != 0) {
+	if (i_ino) {
 		return;
 	}
 
 	UHASH_CALL(uh_ino, insert, h_ino, ino);
 
 	DIR * d = opendir(name);
-	if (d == NULL) {
+	if (!d) {
 		dump_path_error(errno, "process_dir:opendir(3)", name);
 		return;
 	}
@@ -202,13 +200,16 @@ static void process_dir(dev_t dev, ino_t ino, const char * name)
 	char * tname = malloc(sizeof(path));
 
 	struct dirent * dent;
-	while ((dent = readdir(d)) != NULL) {
-		if (filter_out_dots(dent) == 0) {
+	while ((dent = readdir(d))) {
+		if (!filter_out_dots(dent)) {
 			continue;
 		}
 
 		memset(tname, 0, sizeof(path));
-		snprintf(tname, sizeof(path) - 1, "%s/%s", name, dent->d_name);
+		// snprintf(tname, sizeof(path) - 1, "%s/%s", name, dent->d_name);
+		strcpy(tname, name);
+		strcat(tname, "/");
+		strcat(tname, dent->d_name);
 
 		switch (dent->d_type) {
 		case DT_REG:
@@ -250,6 +251,8 @@ static void prepare_internals(void)
 	UHASH_CALL(uh_dev_ino, init, &visited_dirs);
 	UHASH_SET_DEFAULT_KEY_COMPARATOR(&visited_dirs, dev_t);
 	UHASH_SET_VALUE_HANDLERS(&visited_dirs, uh_ino__ctor, uh_ino__dtor);
+
+	memset(&empty_ino, 0, sizeof(empty_ino));
 }
 
 static int handle_file_type(mode_t type, const char * arg)
@@ -266,7 +269,7 @@ static int handle_file_type(mode_t type, const char * arg)
 	default:       e_type = "unknown entry type"; break;
 	}
 
-	if (e_type != NULL) {
+	if (e_type) {
 		fprintf(stderr, "can't handle <%s>, skipping %s\n", e_type, arg);
 		return 0;
 	}
