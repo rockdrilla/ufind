@@ -82,8 +82,8 @@ static uh_dev_ino visited_dirs;
 static void dump_error(int error_num, const char * where);
 static void dump_path_error(int error_num, const char * where, const char * name);
 
-static void process_file(dev_t dev, ino_t ino, const char * name);
-static void process_dir(dev_t dev, ino_t ino, const char * name);
+static void process_file(dev_t dev, ino_t ino, char * name, size_t name_len);
+static void process_dir(dev_t dev, ino_t ino, char * name, size_t name_len);
 
 static int handle_file_type(mode_t type, const char * arg);
 static int resolve_fd(int fd, char * buffer, size_t buffer_size);
@@ -96,7 +96,7 @@ static void process_arg(const char * name)
 		return;
 	}
 
-	struct stat f_stat;
+	static struct stat f_stat;
 	memset(&f_stat, 0, sizeof(f_stat));
 
 	if (fstat(f_fd, &f_stat) < 0) {
@@ -108,86 +108,73 @@ static void process_arg(const char * name)
 		goto process_arg__close;
 	}
 
-	char * tname = calloc(1, sizeof(path));
-	if (!resolve_fd(f_fd, tname, sizeof(path))) {
-		goto process_arg__free;
+	char tname[sizeof(path) + 256];
+
+	memset(tname, 0, sizeof(tname));
+	if (!resolve_fd(f_fd, tname, sizeof(tname))) {
+		goto process_arg__close;
 	}
+
+	size_t tname_len = strlen(tname);
 
 	close(f_fd); f_fd = -1;
 
 	switch (f_stat.st_mode & S_IFMT) {
-	case S_IFREG: process_file(f_stat.st_dev, f_stat.st_ino, tname); break;
-	case S_IFDIR: process_dir(f_stat.st_dev, f_stat.st_ino, tname); break;
-	}
-
-process_arg__free:
-
-	if (tname) {
-		free(tname);
+	case S_IFREG: process_file(f_stat.st_dev, f_stat.st_ino, tname, tname_len); break;
+	case S_IFDIR: process_dir(f_stat.st_dev, f_stat.st_ino, tname, tname_len); break;
 	}
 
 process_arg__close:
 
-	if (f_fd >= 0) {
-		close(f_fd);
-	}
+	if (f_fd >= 0) close(f_fd);
 
 	return;
 }
 
-static void process_file(dev_t dev, ino_t ino, const char * name)
+static void process_file(dev_t dev, ino_t ino, char * name, size_t name_len)
 {
 	uhash_idx_t i_dev = UHASH_CALL(uh_dev_ino, search, &filenames, dev);
-	if (!i_dev) {
+	if (!i_dev)
 		i_dev = UHASH_CALL(uh_dev_ino, insert, &filenames, dev, &empty_ino);
-	}
 
 	uh_ino * h_ino = (uh_ino *) UHASH_CALL(uh_dev_ino, value, &filenames, i_dev);
 	uhash_idx_t i_ino = UHASH_CALL(uh_ino, search, h_ino, ino);
-	if (i_ino) {
-		return;
-	}
+	if (i_ino) return;
 
 	UHASH_CALL(uh_ino, insert, h_ino, ino);
 
-	fputs(name, stdout);
-	fputc(entry_separator, stdout);
+	// fputs(name, stdout);
+	// fputc(entry_separator, stdout);
+	name[name_len] = entry_separator;
+	write(STDOUT_FILENO, name, name_len + 1);
+	name[name_len] = 0;
 }
 
 static inline int filter_out_dots(const struct dirent * entry)
 {
 	/*
-	if (strcmp(entry->d_name, ".") == 0)
-		return 0;
-	if (strcmp(entry->d_name, "..") == 0)
-		return 0;
+	if (strcmp(entry->d_name, ".") == 0)  return 0;
+	if (strcmp(entry->d_name, "..") == 0) return 0;
 	return 1;
 	*/
 
-	if (entry->d_name[0] != '.')
-		return 1;
-	if (entry->d_name[1] == 0)
-		return 0;
-	if (entry->d_name[1] != '.')
-		return 1;
-	if (entry->d_name[2] == 0)
-		return 0;
+	if (entry->d_name[0] != '.') return 1;
+	if (entry->d_name[1] == 0)   return 0;
+	if (entry->d_name[1] != '.') return 1;
+	if (entry->d_name[2] == 0)   return 0;
 
 	return 1;
 }
 
-static void process_dir(dev_t dev, ino_t ino, const char * name)
+static void process_dir(dev_t dev, ino_t ino, char * name, size_t name_len)
 {
 	uhash_idx_t i_dev = UHASH_CALL(uh_dev_ino, search, &visited_dirs, dev);
-	if (!i_dev) {
+	if (!i_dev)
 		i_dev = UHASH_CALL(uh_dev_ino, insert, &visited_dirs, dev, &empty_ino);
-	}
 
 	uh_ino * h_ino = (uh_ino *) UHASH_CALL(uh_dev_ino, value, &visited_dirs, i_dev);
 	uhash_idx_t i_ino = UHASH_CALL(uh_ino, search, h_ino, ino);
-	if (i_ino) {
-		return;
-	}
+	if (i_ino) return;
 
 	UHASH_CALL(uh_ino, insert, h_ino, ino);
 
@@ -196,8 +183,8 @@ static void process_dir(dev_t dev, ino_t ino, const char * name)
 		dump_path_error(errno, "process_dir:opendir(3)", name);
 		return;
 	}
-	
-	char * tname = malloc(sizeof(path));
+
+	char tname[sizeof(path) + 256];
 
 	struct dirent * dent;
 	while ((dent = readdir(d))) {
@@ -205,26 +192,43 @@ static void process_dir(dev_t dev, ino_t ino, const char * name)
 			continue;
 		}
 
-		memset(tname, 0, sizeof(path));
-		// snprintf(tname, sizeof(path) - 1, "%s/%s", name, dent->d_name);
-		strcpy(tname, name);
-		strcat(tname, "/");
-		strcat(tname, dent->d_name);
+		switch (dent->d_type) {
+		case DT_REG:
+			// -fallthrough
+		case DT_DIR:
+			// -fallthrough
+		case DT_LNK:
+			break;
+		default:
+			continue;
+		}
+
+		size_t tname_len = name_len + 1 /* "/" */ + strlen(dent->d_name);
+		if (tname_len > sizeof(path)) {
+			name[name_len] = '/';
+			dump_path_error(ENAMETOOLONG, name, dent->d_name);
+			name[name_len] = 0;
+			continue;
+		}
+
+		memset(tname, 0, sizeof(tname));
+		// snprintf(tname, sizeof(tname) - 1, "%s/%s", name, dent->d_name);
+		memcpy(tname, name, name_len);
+		tname[name_len] = '/';
+		strcpy(&tname[name_len + 1], dent->d_name);
 
 		switch (dent->d_type) {
 		case DT_REG:
-			process_file(dev, dent->d_ino, tname);
+			process_file(dev, dent->d_ino, tname, tname_len);
 			break;
 		case DT_DIR:
-			process_dir(dev, dent->d_ino, tname);
+			process_dir(dev, dent->d_ino, tname, tname_len);
 			break;
 		case DT_LNK:
 			process_arg(tname);
 			break;
 		}
 	}
-
-	free(tname);
 
 	closedir(d);
 }
@@ -261,11 +265,11 @@ static int handle_file_type(mode_t type, const char * arg)
 	switch (type & S_IFMT) {
 	case S_IFREG:  break;
 	case S_IFDIR:  break;
-	case S_IFBLK:  e_type = "block device"; break;
-	case S_IFCHR:  e_type = "character device"; break;
-	case S_IFIFO:  e_type = "FIFO"; break;
-	case S_IFLNK:  e_type = "symbolic link"; break;
-	case S_IFSOCK: e_type = "socket"; break;
+	case S_IFBLK:  e_type = "block device";       break;
+	case S_IFCHR:  e_type = "character device";   break;
+	case S_IFIFO:  e_type = "FIFO";               break;
+	case S_IFLNK:  e_type = "symbolic link";      break;
+	case S_IFSOCK: e_type = "socket";             break;
 	default:       e_type = "unknown entry type"; break;
 	}
 
@@ -279,11 +283,11 @@ static int handle_file_type(mode_t type, const char * arg)
 
 static int resolve_fd(int fd, char * buffer, size_t buffer_size)
 {
-	static char proc_link[40];
+	static char proc_link[48];
 
 	memset(proc_link, 0, sizeof(proc_link));
 	snprintf(proc_link, sizeof(proc_link) - 1, "/proc/self/fd/%d", fd);
-	ssize_t result = readlink(proc_link, buffer, buffer_size);
+	ssize_t result = readlink(proc_link, buffer, buffer_size - 1);
 	if (result < 0) {
 		dump_error(errno, "resolve_fd:readlink(2)");
 		return 0;
@@ -294,7 +298,7 @@ static int resolve_fd(int fd, char * buffer, size_t buffer_size)
 static void dump_error(int error_num, const char * where)
 {
 	char        * e_str = NULL;
-	static char   e_buf[8192];
+	static char   e_buf[4096];
 
 	memset(&e_buf, 0, sizeof(e_buf));
 	e_str = strerror_r(error_num, e_buf, sizeof(e_buf) - 1);
@@ -304,7 +308,7 @@ static void dump_error(int error_num, const char * where)
 static void dump_path_error(int error_num, const char * where, const char * name)
 {
 	char        * e_str = NULL;
-	static char   e_buf[8192];
+	static char   e_buf[4096 + sizeof(path)];
 
 	memset(&e_buf, 0, sizeof(e_buf));
 	e_str = strerror_r(error_num, e_buf, sizeof(e_buf) - 1);
