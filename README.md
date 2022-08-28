@@ -113,27 +113,27 @@ As seen, output MAY be totally unsorted and a bit confusing:
 ```sh
 $ ./benchmark.sh
 
-find /usr/share/: 283379
-./ufind-terse.sh /usr/share/: 235382
-./ufind /usr/share/: 235382
-fdfind -u -j 1 . /usr/share/: 283378
-fdfind -u . /usr/share/: 283378
+find /usr/share/: 283564
+./ufind-terse.sh /usr/share/: 235372
+./ufind /usr/share/: 235372
+fdfind -u -j 1 . /usr/share/: 283563
+fdfind -u . /usr/share/: 283563
 
 Benchmark 1: ./ufind-terse.sh /usr/share
-  Time (mean ± σ):      3.791 s ±  0.025 s    [User: 3.793 s, System: 0.655 s]
-  Range (min … max):    3.757 s …  3.821 s    10 runs
+  Time (mean ± σ):      3.791 s ±  0.037 s    [User: 3.685 s, System: 0.580 s]
+  Range (min … max):    3.740 s …  3.860 s    10 runs
 
 Benchmark 1: ./ufind /usr/share
-  Time (mean ± σ):     693.0 ms ±  28.9 ms    [User: 509.9 ms, System: 181.6 ms]
-  Range (min … max):   664.0 ms … 738.1 ms    50 runs
+  Time (mean ± σ):     534.5 ms ±  23.6 ms    [User: 346.0 ms, System: 187.0 ms]
+  Range (min … max):   515.9 ms … 586.7 ms    50 runs
 
 Benchmark 1: fdfind -u -j 1 . /usr/share
-  Time (mean ± σ):     245.6 ms ±   5.0 ms    [User: 212.2 ms, System: 174.1 ms]
-  Range (min … max):   239.1 ms … 259.1 ms    50 runs
+  Time (mean ± σ):     238.1 ms ±   3.2 ms    [User: 179.0 ms, System: 139.1 ms]
+  Range (min … max):   232.6 ms … 246.7 ms    50 runs
 
 Benchmark 1: fdfind -u . /usr/share
-  Time (mean ± σ):     120.0 ms ±   1.0 ms    [User: 535.8 ms, System: 1021.7 ms]
-  Range (min … max):   116.9 ms … 121.5 ms    50 runs
+  Time (mean ± σ):     112.8 ms ±   2.3 ms    [User: 460.2 ms, System: 855.0 ms]
+  Range (min … max):   109.8 ms … 126.9 ms    50 runs
 ```
 
 ## Building from source:
