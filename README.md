@@ -96,10 +96,17 @@ As seen, output MAY be totally unsorted and a bit confusing:
 - beats shell script variant by speed (see below)
 - much smaller than [sharkdp/fd](https://github.com/sharkdp/fd) :)
 
+```sh
+  $ stat -Lc $'%s\t%n' ufind /usr/bin/fdfind
+  31296   ufind
+  2501320 /usr/bin/fdfind
+```
+
 ## Cons:
 
 - error-prone to TOCTOU, that's why it's safely usable only while building container images
 - much slower than [sharkdp/fd](https://github.com/sharkdp/fd) :(
+- totally unsorted output
 
 ## Benchmark:
 
