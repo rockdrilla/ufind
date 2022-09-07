@@ -30,6 +30,8 @@ echo
 echo "# compare performance:"
 echo
 
+hyper_test find
+
 RUNS=1 hyper_test ./ufind-terse.sh
 
 hyper_test ./ufind

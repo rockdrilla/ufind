@@ -112,28 +112,44 @@ As seen, output MAY be totally unsorted and a bit confusing:
 
 ```sh
 $ ./benchmark.sh
+# compare numbers from different utilities:
 
-find /usr/share/: 283564
-./ufind-terse.sh /usr/share/: 235372
-./ufind /usr/share/: 235372
-fdfind -u -j 1 . /usr/share/: 283563
-fdfind -u . /usr/share/: 283563
+find /usr/bin/: 4020
+./ufind-terse.sh /usr/bin/: 3327
+./ufind /usr/bin/: 3327
+fdfind -u -j 1 . /usr/bin/: 4019
+fdfind -u . /usr/bin/: 4019
+
+# compare performance:
+
+Benchmark 1: find /usr/share
+  Time (mean ± σ):     166.4 ms ±   6.8 ms    [User: 43.3 ms, System: 122.7 ms]
+  Range (min … max):   159.6 ms … 176.4 ms    30 runs
 
 Benchmark 1: ./ufind-terse.sh /usr/share
-  Time (mean ± σ):      3.791 s ±  0.037 s    [User: 3.685 s, System: 0.580 s]
-  Range (min … max):    3.740 s …  3.860 s    10 runs
+  Time (abs ≡):         2.579 s               [User: 2.525 s, System: 0.501 s]
 
 Benchmark 1: ./ufind /usr/share
-  Time (mean ± σ):     534.5 ms ±  23.6 ms    [User: 346.0 ms, System: 187.0 ms]
-  Range (min … max):   515.9 ms … 586.7 ms    50 runs
+  Time (mean ± σ):     520.4 ms ±  25.1 ms    [User: 329.2 ms, System: 190.0 ms]
+  Range (min … max):   499.6 ms … 561.2 ms    30 runs
+
+# run ufind with env MALLOC_ARENA_MAX=2:
+Benchmark 1: ./ufind /usr/share
+  Time (mean ± σ):     516.4 ms ±  23.3 ms    [User: 321.6 ms, System: 194.1 ms]
+  Range (min … max):   499.0 ms … 565.7 ms    30 runs
+
+# run ufind with env MALLOC_ARENA_MAX=1:
+Benchmark 1: ./ufind /usr/share
+  Time (mean ± σ):     516.5 ms ±  23.7 ms    [User: 312.4 ms, System: 203.3 ms]
+  Range (min … max):   498.9 ms … 561.8 ms    30 runs
 
 Benchmark 1: fdfind -u -j 1 . /usr/share
-  Time (mean ± σ):     238.1 ms ±   3.2 ms    [User: 179.0 ms, System: 139.1 ms]
-  Range (min … max):   232.6 ms … 246.7 ms    50 runs
+  Time (mean ± σ):     234.2 ms ±   2.9 ms    [User: 177.7 ms, System: 137.3 ms]
+  Range (min … max):   230.8 ms … 242.8 ms    30 runs
 
 Benchmark 1: fdfind -u . /usr/share
-  Time (mean ± σ):     112.8 ms ±   2.3 ms    [User: 460.2 ms, System: 855.0 ms]
-  Range (min … max):   109.8 ms … 126.9 ms    50 runs
+  Time (mean ± σ):     111.3 ms ±   1.4 ms    [User: 437.5 ms, System: 861.7 ms]
+  Range (min … max):   106.7 ms … 113.4 ms    30 runs
 ```
 
 ## Building from source:
