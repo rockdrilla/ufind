@@ -1,4 +1,4 @@
 .vscode/
-a.out
 build/
+ufind
 CMakeLists.txt.user

@@ -1,13 +1,7 @@
-/* ufind: simple find(1) replacement with destination uniqueness checks
+/* ufind: simple find(1) replacement with target uniqueness checks
  *
  * SPDX-License-Identifier: Apache-2.0
  * (c) 2022, Konstantin Demin
- *
- * Rough alternative (but slow):
- *  find "$@" -follow -type f -print0 \
- *  | xargs -0 -r -n 128 stat -L --printf='%d:%i|%n\0' \
- *  | sort -z -u -t '|' -k1,1 \
- *  | cut -z -d '|' -f 2
  */
 
 #define _GNU_SOURCE
@@ -86,7 +80,7 @@ static void process_file(dev_t dev, ino_t ino, char * name, size_t name_len);
 static void process_dir(dev_t dev, ino_t ino, char * name, size_t name_len);
 
 static int handle_file_type(mode_t type, const char * arg);
-static int resolve_fd(int fd, char * buffer, size_t buffer_size);
+static size_t resolve_fd(int fd, char * buffer, size_t buffer_size);
 
 static void process_arg(const char * name)
 {
@@ -97,8 +91,8 @@ static void process_arg(const char * name)
 	}
 
 	static struct stat f_stat;
-	memset(&f_stat, 0, sizeof(f_stat));
 
+	memset(&f_stat, 0, sizeof(f_stat));
 	if (fstat(f_fd, &f_stat) < 0) {
 		dump_path_error(errno, "process_arg:fstat(2)", name);
 		goto process_arg__close;
@@ -108,14 +102,13 @@ static void process_arg(const char * name)
 		goto process_arg__close;
 	}
 
-	char tname[sizeof(path) + 256];
+	char tname[sizeof(path)];
 
 	memset(tname, 0, sizeof(tname));
-	if (!resolve_fd(f_fd, tname, sizeof(tname))) {
+	size_t tname_len = resolve_fd(f_fd, tname, sizeof(tname));
+	if (!tname_len) {
 		goto process_arg__close;
 	}
-
-	size_t tname_len = strlen(tname);
 
 	close(f_fd); f_fd = -1;
 
@@ -184,7 +177,7 @@ static void process_dir(dev_t dev, ino_t ino, char * name, size_t name_len)
 		return;
 	}
 
-	char tname[sizeof(path) + 256];
+	char tname[sizeof(path)];
 
 	struct dirent * dent;
 	while ((dent = readdir(d))) {
@@ -203,19 +196,20 @@ static void process_dir(dev_t dev, ino_t ino, char * name, size_t name_len)
 			continue;
 		}
 
-		size_t tname_len = name_len + 1 /* "/" */ + strlen(dent->d_name);
-		if (tname_len > sizeof(path)) {
+		size_t dname_len = strlen(dent->d_name);
+		size_t tname_len = name_len + 1 /* "/" */ + dname_len;
+		if (tname_len >= sizeof(tname)) {
 			name[name_len] = '/';
 			dump_path_error(ENAMETOOLONG, name, dent->d_name);
 			name[name_len] = 0;
 			continue;
 		}
 
-		memset(tname, 0, sizeof(tname));
-		// snprintf(tname, sizeof(tname) - 1, "%s/%s", name, dent->d_name);
+		// snprintf(tname, sizeof(tname), "%s/%s", name, dent->d_name);
 		memcpy(tname, name, name_len);
 		tname[name_len] = '/';
-		strcpy(&tname[name_len + 1], dent->d_name);
+		memcpy(&tname[name_len + 1], dent->d_name, dname_len);
+		tname[name_len + 1 + dname_len] = 0;
 
 		switch (dent->d_type) {
 		case DT_REG:
@@ -281,18 +275,17 @@ static int handle_file_type(mode_t type, const char * arg)
 	return 1;
 }
 
-static int resolve_fd(int fd, char * buffer, size_t buffer_size)
+static size_t resolve_fd(int fd, char * buffer, size_t buffer_size)
 {
 	static char proc_link[48];
 
-	memset(proc_link, 0, sizeof(proc_link));
-	snprintf(proc_link, sizeof(proc_link) - 1, "/proc/self/fd/%d", fd);
+	snprintf(proc_link, sizeof(proc_link), "/proc/self/fd/%d", fd);
 	ssize_t result = readlink(proc_link, buffer, buffer_size - 1);
 	if (result < 0) {
 		dump_error(errno, "resolve_fd:readlink(2)");
 		return 0;
 	}
-	return 1;
+	return result;
 }
 
 static void dump_error(int error_num, const char * where)
