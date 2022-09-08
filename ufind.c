@@ -62,8 +62,8 @@ int main(int argc, char * argv[])
 typedef struct { char path[4096]; } path;
 
 /* "visited" entries */
-UHASH_DEFINE__TYPE0(uh_ino, ino_t);
-UHASH_DEFINE__TYPE2(uh_dev_ino, dev_t, uh_ino);
+UHASH_DEFINE_TYPE0(uh_ino, ino_t);
+UHASH_DEFINE_TYPE2(uh_dev_ino, dev_t, uh_ino);
 
 UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(dev_t);
 UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(ino_t);
