@@ -126,12 +126,12 @@ process_arg__close:
 
 static void process_file(dev_t dev, ino_t ino, char * name, size_t name_len)
 {
-	uhash_idx_t i_dev = UHASH_CALL(uh_dev_ino, search, &filenames, dev);
+	UHASH_IDX_T i_dev = UHASH_CALL(uh_dev_ino, search, &filenames, dev);
 	if (!i_dev)
 		i_dev = UHASH_CALL(uh_dev_ino, insert, &filenames, dev, &empty_ino);
 
 	uh_ino * h_ino = (uh_ino *) UHASH_CALL(uh_dev_ino, value, &filenames, i_dev);
-	uhash_idx_t i_ino = UHASH_CALL(uh_ino, search, h_ino, ino);
+	UHASH_IDX_T i_ino = UHASH_CALL(uh_ino, search, h_ino, ino);
 	if (i_ino) return;
 
 	UHASH_CALL(uh_ino, insert, h_ino, ino);
@@ -161,12 +161,12 @@ static inline int filter_out_dots(const struct dirent * entry)
 
 static void process_dir(dev_t dev, ino_t ino, char * name, size_t name_len)
 {
-	uhash_idx_t i_dev = UHASH_CALL(uh_dev_ino, search, &visited_dirs, dev);
+	UHASH_IDX_T i_dev = UHASH_CALL(uh_dev_ino, search, &visited_dirs, dev);
 	if (!i_dev)
 		i_dev = UHASH_CALL(uh_dev_ino, insert, &visited_dirs, dev, &empty_ino);
 
 	uh_ino * h_ino = (uh_ino *) UHASH_CALL(uh_dev_ino, value, &visited_dirs, i_dev);
-	uhash_idx_t i_ino = UHASH_CALL(uh_ino, search, h_ino, ino);
+	UHASH_IDX_T i_ino = UHASH_CALL(uh_ino, search, h_ino, ino);
 	if (i_ino) return;
 
 	UHASH_CALL(uh_ino, insert, h_ino, ino);
