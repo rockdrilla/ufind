@@ -61,17 +61,15 @@ int main(int argc, char * argv[])
 
 typedef struct { char path[4096]; } path;
 
-/* "visited" entries */
-UHASH_DEFINE_TYPE0(uh_ino, ino_t);
-UHASH_DEFINE_TYPE2(uh_dev_ino, dev_t, uh_ino);
+UHASH_DEFINE_TYPE0(uh1, ino_t);
+typedef struct { uh1 dir, file; } seen_t;
+UHASH_DEFINE_TYPE2(uh0, dev_t, seen_t);
 
 UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(dev_t);
 UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(ino_t);
 
-static uh_ino empty_ino;
-
-static uh_dev_ino filenames;
-static uh_dev_ino visited_dirs;
+static seen_t  empty_seen;
+static uh0     devroot;
 
 static void dump_error(int error_num, const char * where);
 static void dump_path_error(int error_num, const char * where, const char * name);
@@ -79,8 +77,8 @@ static void dump_path_error(int error_num, const char * where, const char * name
 static void process_file(dev_t dev, ino_t ino, char * name, size_t name_len);
 static void process_dir(dev_t dev, ino_t ino, char * name, size_t name_len);
 
-static int handle_file_type(mode_t type, const char * arg);
-static size_t resolve_fd(int fd, char * buffer, size_t buffer_size);
+static CC_FORCE_INLINE int handle_file_type(mode_t type, const char * arg);
+static CC_FORCE_INLINE size_t resolve_fd(int fd, char * buffer, size_t buffer_size);
 
 static void process_arg(const char * name)
 {
@@ -126,15 +124,15 @@ process_arg__close:
 
 static void process_file(dev_t dev, ino_t ino, char * name, size_t name_len)
 {
-	UHASH_IDX_T i_dev = UHASH_CALL(uh_dev_ino, search, &filenames, dev);
-	if (!i_dev)
-		i_dev = UHASH_CALL(uh_dev_ino, insert, &filenames, dev, &empty_ino);
+	UHASH_IDX_T i_seen = UHASH_CALL(uh0, search, &devroot, dev);
+	if (!i_seen)
+		i_seen = UHASH_CALL(uh0, insert, &devroot, dev, &empty_seen);
 
-	uh_ino * h_ino = (uh_ino *) UHASH_CALL(uh_dev_ino, value, &filenames, i_dev);
-	UHASH_IDX_T i_ino = UHASH_CALL(uh_ino, search, h_ino, ino);
+	seen_t * p_seen = (seen_t *) UHASH_CALL(uh0, value, &devroot, i_seen);
+	UHASH_IDX_T i_ino = UHASH_CALL(uh1, search, &(p_seen->file), ino);
 	if (i_ino) return;
 
-	UHASH_CALL(uh_ino, insert, h_ino, ino);
+	UHASH_CALL(uh1, insert, &(p_seen->file), ino);
 
 	// fputs(name, stdout);
 	// fputc(entry_separator, stdout);
@@ -143,7 +141,7 @@ static void process_file(dev_t dev, ino_t ino, char * name, size_t name_len)
 	name[name_len] = 0;
 }
 
-static inline int filter_out_dots(const struct dirent * entry)
+static CC_FORCE_INLINE int filter_out_dots(const struct dirent * entry)
 {
 	/*
 	if (strcmp(entry->d_name, ".") == 0)  return 0;
@@ -159,17 +157,31 @@ static inline int filter_out_dots(const struct dirent * entry)
 	return 1;
 }
 
+static CC_FORCE_INLINE int filter_out_types(const struct dirent * entry)
+{
+	switch (entry->d_type) {
+	case DT_REG:
+		// -fallthrough
+	case DT_DIR:
+		// -fallthrough
+	case DT_LNK:
+		return 1;
+	}
+
+	return 0;
+}
+
 static void process_dir(dev_t dev, ino_t ino, char * name, size_t name_len)
 {
-	UHASH_IDX_T i_dev = UHASH_CALL(uh_dev_ino, search, &visited_dirs, dev);
-	if (!i_dev)
-		i_dev = UHASH_CALL(uh_dev_ino, insert, &visited_dirs, dev, &empty_ino);
+	UHASH_IDX_T i_seen = UHASH_CALL(uh0, search, &devroot, dev);
+	if (!i_seen)
+		i_seen = UHASH_CALL(uh0, insert, &devroot, dev, &empty_seen);
 
-	uh_ino * h_ino = (uh_ino *) UHASH_CALL(uh_dev_ino, value, &visited_dirs, i_dev);
-	UHASH_IDX_T i_ino = UHASH_CALL(uh_ino, search, h_ino, ino);
+	seen_t * p_seen = (seen_t *) UHASH_CALL(uh0, value, &devroot, i_seen);
+	UHASH_IDX_T i_ino = UHASH_CALL(uh1, search, &(p_seen->dir), ino);
 	if (i_ino) return;
 
-	UHASH_CALL(uh_ino, insert, h_ino, ino);
+	UHASH_CALL(uh1, insert, &(p_seen->dir), ino);
 
 	DIR * d = opendir(name);
 	if (!d) {
@@ -177,24 +189,17 @@ static void process_dir(dev_t dev, ino_t ino, char * name, size_t name_len)
 		return;
 	}
 
+	if (name[name_len - 1] == '/') name_len--;
+
 	char tname[sizeof(path)];
 
 	struct dirent * dent;
 	while ((dent = readdir(d))) {
-		if (!filter_out_dots(dent)) {
+		if (!filter_out_dots(dent))
 			continue;
-		}
 
-		switch (dent->d_type) {
-		case DT_REG:
-			// -fallthrough
-		case DT_DIR:
-			// -fallthrough
-		case DT_LNK:
-			break;
-		default:
+		if (!filter_out_types(dent))
 			continue;
-		}
 
 		size_t dname_len = strlen(dent->d_name);
 		size_t tname_len = name_len + 1 /* "/" */ + dname_len;
@@ -212,14 +217,11 @@ static void process_dir(dev_t dev, ino_t ino, char * name, size_t name_len)
 		tname[name_len + 1 + dname_len] = 0;
 
 		switch (dent->d_type) {
-		case DT_REG:
-			process_file(dev, dent->d_ino, tname, tname_len);
+		case DT_REG: process_file(dev, dent->d_ino, tname, tname_len);
 			break;
-		case DT_DIR:
-			process_dir(dev, dent->d_ino, tname, tname_len);
+		case DT_DIR: process_dir(dev, dent->d_ino, tname, tname_len);
 			break;
-		case DT_LNK:
-			process_arg(tname);
+		case DT_LNK: process_arg(tname);
 			break;
 		}
 	}
@@ -227,33 +229,34 @@ static void process_dir(dev_t dev, ino_t ino, char * name, size_t name_len)
 	closedir(d);
 }
 
-static int uh_ino__ctor(uh_ino * hash)
+static int seen_t__ctor(seen_t * s)
 {
-	UHASH_CALL(uh_ino, init, hash);
-	UHASH_SET_DEFAULT_KEY_COMPARATOR(hash, ino_t);
+	UHASH_CALL(uh1, init, &(s->dir));
+	UHASH_SET_DEFAULT_KEY_COMPARATOR(&(s->dir), ino_t);
+
+	UHASH_CALL(uh1, init, &(s->file));
+	UHASH_SET_DEFAULT_KEY_COMPARATOR(&(s->file), ino_t);
+
 	return 0;
 }
 
-static int uh_ino__dtor(uh_ino * hash)
+static int seen_t__dtor(seen_t * s)
 {
-	UHASH_CALL(uh_ino, free, hash);
+	UHASH_CALL(uh1, free, &(s->dir));
+	UHASH_CALL(uh1, free, &(s->file));
 	return 0;
 }
 
 static void prepare_internals(void)
 {
-	UHASH_CALL(uh_dev_ino, init, &filenames);
-	UHASH_SET_DEFAULT_KEY_COMPARATOR(&filenames, dev_t);
-	UHASH_SET_VALUE_HANDLERS(&filenames, uh_ino__ctor, uh_ino__dtor);
+	UHASH_CALL(uh0, init, &devroot);
+	UHASH_SET_DEFAULT_KEY_COMPARATOR(&devroot, dev_t);
+	UHASH_SET_VALUE_HANDLERS(&devroot, seen_t__ctor, seen_t__dtor);
 
-	UHASH_CALL(uh_dev_ino, init, &visited_dirs);
-	UHASH_SET_DEFAULT_KEY_COMPARATOR(&visited_dirs, dev_t);
-	UHASH_SET_VALUE_HANDLERS(&visited_dirs, uh_ino__ctor, uh_ino__dtor);
-
-	memset(&empty_ino, 0, sizeof(empty_ino));
+	memset(&empty_seen, 0, sizeof(empty_seen));
 }
 
-static int handle_file_type(mode_t type, const char * arg)
+static CC_FORCE_INLINE int handle_file_type(mode_t type, const char * arg)
 {
 	const char * e_type = NULL;
 	switch (type & S_IFMT) {
@@ -275,7 +278,7 @@ static int handle_file_type(mode_t type, const char * arg)
 	return 1;
 }
 
-static size_t resolve_fd(int fd, char * buffer, size_t buffer_size)
+static CC_FORCE_INLINE size_t resolve_fd(int fd, char * buffer, size_t buffer_size)
 {
 	static char proc_link[48];
 
