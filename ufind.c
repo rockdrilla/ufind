@@ -74,11 +74,11 @@ static uh0     devroot;
 static void dump_error(int error_num, const char * where);
 static void dump_path_error(int error_num, const char * where, const char * name);
 
-static void process_file(dev_t dev, ino_t ino, char * name, size_t name_len);
-static void process_dir(dev_t dev, ino_t ino, char * name, size_t name_len);
+static void process_file(dev_t dev, ino_t ino, char * name, uint32_t name_len);
+static void process_dir(dev_t dev, ino_t ino, char * name, uint32_t name_len);
 
 static CC_FORCE_INLINE int handle_file_type(mode_t type, const char * arg);
-static CC_FORCE_INLINE size_t resolve_fd(int fd, char * buffer, size_t buffer_size);
+static CC_FORCE_INLINE uint32_t resolve_fd(int fd, char * buffer, uint32_t buffer_size);
 
 static void process_arg(const char * name)
 {
@@ -103,7 +103,7 @@ static void process_arg(const char * name)
 	char tname[sizeof(path)];
 
 	memset(tname, 0, sizeof(tname));
-	size_t tname_len = resolve_fd(f_fd, tname, sizeof(tname));
+	uint32_t tname_len = resolve_fd(f_fd, tname, sizeof(tname));
 	if (!tname_len) {
 		goto process_arg__close;
 	}
@@ -122,7 +122,7 @@ process_arg__close:
 	return;
 }
 
-static void process_file(dev_t dev, ino_t ino, char * name, size_t name_len)
+static void process_file(dev_t dev, ino_t ino, char * name, uint32_t name_len)
 {
 	UHASH_IDX_T i_seen = UHASH_CALL(uh0, search, &devroot, dev);
 	if (!i_seen)
@@ -171,7 +171,7 @@ static CC_FORCE_INLINE int filter_out_types(const struct dirent * entry)
 	return 0;
 }
 
-static void process_dir(dev_t dev, ino_t ino, char * name, size_t name_len)
+static void process_dir(dev_t dev, ino_t ino, char * name, uint32_t name_len)
 {
 	UHASH_IDX_T i_seen = UHASH_CALL(uh0, search, &devroot, dev);
 	if (!i_seen)
@@ -201,8 +201,8 @@ static void process_dir(dev_t dev, ino_t ino, char * name, size_t name_len)
 		if (!filter_out_types(dent))
 			continue;
 
-		size_t dname_len = strlen(dent->d_name);
-		size_t tname_len = name_len + 1 /* "/" */ + dname_len;
+		uint32_t dname_len = strnlen(dent->d_name, sizeof(dent->d_name) / sizeof(dent->d_name[0]));
+		uint32_t tname_len = name_len + 1 /* "/" */ + dname_len;
 		if (tname_len >= sizeof(tname)) {
 			name[name_len] = '/';
 			dump_path_error(ENAMETOOLONG, name, dent->d_name);
@@ -278,7 +278,7 @@ static CC_FORCE_INLINE int handle_file_type(mode_t type, const char * arg)
 	return 1;
 }
 
-static CC_FORCE_INLINE size_t resolve_fd(int fd, char * buffer, size_t buffer_size)
+static CC_FORCE_INLINE uint32_t resolve_fd(int fd, char * buffer, uint32_t buffer_size)
 {
 	static char proc_link[48];
 
