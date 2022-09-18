@@ -77,7 +77,7 @@ static void dump_path_error(int error_num, const char * where, const char * name
 static void process_file(dev_t dev, ino_t ino, char * name, uint32_t name_len);
 static void process_dir(dev_t dev, ino_t ino, char * name, uint32_t name_len);
 
-static CC_FORCE_INLINE int handle_file_type(mode_t type, const char * arg);
+static CC_FORCE_INLINE int handle_file_type(uint32_t type, const char * arg, const char * dir, uint32_t dir_len);
 static CC_FORCE_INLINE uint32_t resolve_fd(int fd, char * buffer, uint32_t buffer_size);
 
 static void process_arg(const char * name)
@@ -96,7 +96,7 @@ static void process_arg(const char * name)
 		goto process_arg__close;
 	}
 
-	if (!handle_file_type(f_stat.st_mode, name)) {
+	if (!handle_file_type(IFTODT(f_stat.st_mode), name, NULL, 0)) {
 		goto process_arg__close;
 	}
 
@@ -157,20 +157,6 @@ static CC_FORCE_INLINE int filter_out_dots(const struct dirent * entry)
 	return 1;
 }
 
-static CC_FORCE_INLINE int filter_out_types(const struct dirent * entry)
-{
-	switch (entry->d_type) {
-	case DT_REG:
-		// -fallthrough
-	case DT_DIR:
-		// -fallthrough
-	case DT_LNK:
-		return 1;
-	}
-
-	return 0;
-}
-
 static void process_dir(dev_t dev, ino_t ino, char * name, uint32_t name_len)
 {
 	UHASH_IDX_T i_seen = UHASH_CALL(uh0, search, &devroot, dev);
@@ -198,7 +184,7 @@ static void process_dir(dev_t dev, ino_t ino, char * name, uint32_t name_len)
 		if (!filter_out_dots(dent))
 			continue;
 
-		if (!filter_out_types(dent))
+		if (!handle_file_type(dent->d_type, dent->d_name, name, name_len))
 			continue;
 
 		uint32_t dname_len = strnlen(dent->d_name, sizeof(dent->d_name) / sizeof(dent->d_name[0]));
@@ -256,26 +242,31 @@ static void prepare_internals(void)
 	memset(&empty_seen, 0, sizeof(empty_seen));
 }
 
-static CC_FORCE_INLINE int handle_file_type(mode_t type, const char * arg)
+static CC_FORCE_INLINE int handle_file_type(uint32_t type, const char * arg, const char * dir, uint32_t dir_len)
 {
 	const char * e_type = NULL;
-	switch (type & S_IFMT) {
-	case S_IFREG:  break;
-	case S_IFDIR:  break;
-	case S_IFBLK:  e_type = "block device";       break;
-	case S_IFCHR:  e_type = "character device";   break;
-	case S_IFIFO:  e_type = "FIFO";               break;
-	case S_IFLNK:  e_type = "symbolic link";      break;
-	case S_IFSOCK: e_type = "socket";             break;
-	default:       e_type = "unknown entry type"; break;
+	switch (type) {
+	case DT_REG:  break;
+	case DT_DIR:  break;
+	case DT_LNK:  e_type = (dir)
+	                     ? NULL
+	                     : "symbolic link"; break;
+
+	case DT_BLK:  e_type = "block device";       break;
+	case DT_CHR:  e_type = "character device";   break;
+	case DT_FIFO: e_type = "FIFO";               break;
+	case DT_SOCK: e_type = "socket";             break;
+	default:      e_type = "unknown entry type"; break;
 	}
 
-	if (e_type) {
+	if (!e_type) return 1;
+
+	if (dir) {
+		fprintf(stderr, "%.*s: can't handle <%s>, skipping %s\n", dir_len, dir, e_type, arg);
+	} else {
 		fprintf(stderr, "can't handle <%s>, skipping %s\n", e_type, arg);
-		return 0;
 	}
-
-	return 1;
+	return 0;
 }
 
 static CC_FORCE_INLINE uint32_t resolve_fd(int fd, char * buffer, uint32_t buffer_size)
