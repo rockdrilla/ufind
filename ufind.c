@@ -123,8 +123,8 @@ static void dump_path_error(int error_num, const char * where, const char * name
 static void process_file(dev_t dev, ino_t ino, char * name, uint32_t name_len);
 static void process_dir(dev_t dev, ino_t ino, char * name, uint32_t name_len);
 
-static CC_FORCE_INLINE int handle_file_type(uint32_t type, const char * arg, const char * dir, uint32_t dir_len);
-static CC_FORCE_INLINE uint32_t resolve_fd(int fd, char * buffer, uint32_t buffer_size);
+static int handle_file_type(uint32_t type, const char * arg, const char * dir, uint32_t dir_len);
+static uint32_t resolve_fd(int fd, char * buffer, uint32_t buffer_size);
 
 static void process_arg(const char * name)
 {
@@ -288,7 +288,7 @@ static void prepare_internals(void)
 	memset(&empty_seen, 0, sizeof(empty_seen));
 }
 
-static CC_FORCE_INLINE int handle_file_type(uint32_t type, const char * arg, const char * dir, uint32_t dir_len)
+static int handle_file_type(uint32_t type, const char * arg, const char * dir, uint32_t dir_len)
 {
 	const char * e_type = NULL;
 	switch (type) {
@@ -317,7 +317,7 @@ static CC_FORCE_INLINE int handle_file_type(uint32_t type, const char * arg, con
 	return 0;
 }
 
-static CC_FORCE_INLINE uint32_t resolve_fd(int fd, char * buffer, uint32_t buffer_size)
+static uint32_t resolve_fd(int fd, char * buffer, uint32_t buffer_size)
 {
 	static char proc_link[48];
 
