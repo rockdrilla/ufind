@@ -20,43 +20,89 @@
 
 #include "include/uhash/uhash.h"
 
-static void usage(void)
+#define UFIND_OPTS "hqsz"
+
+static void usage(int retcode)
 {
-	fprintf(stderr,
-		"ufind 0.3.0\n"
-		"Usage: ufind [-z] <path> [..<path>]\n"
-		"  -z  - separate entries with \\0 instead of \\n\n"
-	);
+	fputs(
+	"ufind 0.3.0\n"
+	"Usage: ufind [-" UFIND_OPTS "] <path> [..<path>]\n"
+	" -h  - help (show this message)\n"
+	" -q  - quiet (don't print information messages in stderr)\n"
+	" -s  - silent (don't print error messages in stderr)\n"
+	" -z  - zero-separator (separate entries with \\0 instead of \\n)\n"
+	, stderr);
+
+	exit(retcode);
 }
+
+static struct {
+	int posix
+	,	Quiet
+	,	Silent
+	,	Zero_separator
+	;
+} opt;
+
+static char entry_separator = '\n';
+
+static void init_opts(void);
+static void parse_flags(int argc, char * argv[]);
 
 static void prepare_internals(void);
 static void process_arg(const char * arg);
 
-static char entry_separator = '\n';
-
 int main(int argc, char * argv[])
 {
 	if (argc < 2) {
-		usage();
+		usage(0);
 		return 0;
 	}
 
-	// skip 1st argument
-	argc--; argv++;
-
-	if (strcmp(argv[0], "-z") == 0) {
-		entry_separator = 0;
-		// skip argument
-		argc--; argv++;
-	}
+	parse_flags(argc, argv);
+	if (optind >= argc) usage(EINVAL);
+	if (opt.Zero_separator) entry_separator = 0;
 
 	prepare_internals();
 
-	for (int i = 0; i < argc; i++) {
+	for (int i = optind; i < argc; i++) {
 		process_arg(argv[i]);
 	}
 
 	return 0;
+}
+
+static void init_opts(void)
+{
+	memset(&opt, 0, sizeof(opt));
+
+	if (getenv("POSIXLY_CORRECT")) opt.posix = 1;
+}
+
+static void parse_flags(int argc, char * argv[])
+{
+	int o;
+	while ((o = getopt(argc, argv, UFIND_OPTS)) != -1) {
+		switch (o) {
+		case 'h':
+			usage(0);
+			break;
+		case 'q':
+			if (opt.posix && opt.Quiet) break;
+			opt.Quiet = 1;
+			continue;
+		case 's':
+			if (opt.posix && opt.Silent) break;
+			opt.Silent = 1;
+			continue;
+		case 'z':
+			if (opt.posix && opt.Zero_separator) break;
+			opt.Zero_separator = 1;
+			continue;
+		}
+
+		usage(EINVAL);
+	}
 }
 
 typedef struct { char path[4096]; } path;
@@ -261,6 +307,8 @@ static CC_FORCE_INLINE int handle_file_type(uint32_t type, const char * arg, con
 
 	if (!e_type) return 1;
 
+	if (opt.Quiet) return 0;
+
 	if (dir) {
 		fprintf(stderr, "%.*s: can't handle <%s>, skipping %s\n", dir_len, dir, e_type, arg);
 	} else {
@@ -284,6 +332,8 @@ static CC_FORCE_INLINE uint32_t resolve_fd(int fd, char * buffer, uint32_t buffe
 
 static void dump_error(int error_num, const char * where)
 {
+	if (opt.Silent) return;
+
 	char        * e_str = NULL;
 	static char   e_buf[4096];
 
@@ -294,6 +344,8 @@ static void dump_error(int error_num, const char * where)
 
 static void dump_path_error(int error_num, const char * where, const char * name)
 {
+	if (opt.Silent) return;
+
 	char        * e_str = NULL;
 	static char   e_buf[4096 + sizeof(path)];
 
