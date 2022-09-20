@@ -62,11 +62,7 @@ int main(int argc, char * argv[])
 		return 0;
 	}
 
-	memset(&opt, 0, sizeof(opt));
 	parse_flags(argc, argv);
-	if (optind >= argc) usage(EINVAL);
-	if (opt.Zero_separator) entry_separator = 0;
-
 	prepare_internals();
 
 	for (int i = optind; i < argc; i++) {
@@ -81,6 +77,8 @@ int main(int argc, char * argv[])
 
 static void parse_flags(int argc, char * argv[])
 {
+	memset(&opt, 0, sizeof(opt));
+
 	int o;
 	while ((o = getopt(argc, argv, UFIND_OPTS)) != -1) {
 		switch (o) {
@@ -107,6 +105,9 @@ static void parse_flags(int argc, char * argv[])
 
 		usage(EINVAL);
 	}
+
+	if (optind >= argc) usage(EINVAL);
+	if (opt.Zero_separator) entry_separator = 0;
 }
 
 typedef struct { char path[4096]; } path;
