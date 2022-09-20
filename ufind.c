@@ -221,11 +221,15 @@ static void process_dir(dev_t dev, ino_t ino, char * name, uint32_t name_len)
 		return;
 	}
 
-	if (name[name_len - 1] == '/') name_len--;
+	if (name[name_len - 1] != '/') {
+		name[name_len] = '/';
+		name_len++;
+	}
 
 	char tname[sizeof(path)];
 
 	struct dirent * dent;
+	uint32_t dname_len, tname_len;
 	while ((dent = readdir(d))) {
 		if (!filter_out_dots(dent))
 			continue;
@@ -233,20 +237,16 @@ static void process_dir(dev_t dev, ino_t ino, char * name, uint32_t name_len)
 		if (!handle_file_type(dent->d_type, dent->d_name, name, name_len))
 			continue;
 
-		uint32_t dname_len = strnlen(dent->d_name, sizeof(dent->d_name) / sizeof(dent->d_name[0]));
-		uint32_t tname_len = name_len + 1 /* "/" */ + dname_len;
+		dname_len = strnlen(dent->d_name, sizeof(dent->d_name) / sizeof(dent->d_name[0]));
+		tname_len = name_len + dname_len;
 		if (tname_len >= sizeof(tname)) {
-			name[name_len] = '/';
 			dump_path_error(ENAMETOOLONG, name, dent->d_name);
-			name[name_len] = 0;
 			continue;
 		}
 
-		// snprintf(tname, sizeof(tname), "%s/%s", name, dent->d_name);
 		memcpy(tname, name, name_len);
-		tname[name_len] = '/';
-		memcpy(&tname[name_len + 1], dent->d_name, dname_len);
-		tname[name_len + 1 + dname_len] = 0;
+		memcpy(&(tname[name_len]), dent->d_name, dname_len);
+		tname[name_len + dname_len] = 0;
 
 		switch (dent->d_type) {
 		case DT_REG: process_file(dev, dent->d_ino, tname, tname_len);
