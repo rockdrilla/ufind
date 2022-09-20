@@ -20,7 +20,7 @@
 
 #include "include/uhash/uhash.h"
 
-#define UFIND_OPTS "hqsxz"
+#define UFIND_OPTS "hqvxz"
 
 static void usage(int retcode)
 {
@@ -28,8 +28,8 @@ static void usage(int retcode)
 	"ufind 0.4.0\n"
 	"Usage: ufind [-" UFIND_OPTS "] <path> [..<path>]\n"
 	" -h  - help (show this message)\n"
-	" -q  - quiet (don't print information messages in stderr)\n"
-	" -s  - silent (don't print error messages in stderr)\n"
+	" -q  - quiet (don't print error messages in stderr)\n"
+	" -v  - verbose (print information messages in stderr)\n"
 	" -x  - [no] cross-dev (skip entries on different file systems)\n"
 	" -z  - zero-separator (separate entries with \\0 instead of \\n)\n"
 	, stderr);
@@ -38,18 +38,17 @@ static void usage(int retcode)
 }
 
 static struct {
-	int posix
-	,	Quiet
-	,	Silent
-	,	Xdev
-	,	Zero_separator
+	uint8_t
+	  Quiet
+	, Verbose
+	, Xdev
+	, Zero_separator
 	;
 } opt;
 
 static char entry_separator = '\n';
-static int devroot_seal = 0;
+static uint8_t devroot_seal = 0;
 
-static void init_opts(void);
 static void parse_flags(int argc, char * argv[]);
 
 static void prepare_internals(void);
@@ -62,6 +61,7 @@ int main(int argc, char * argv[])
 		return 0;
 	}
 
+	memset(&opt, 0, sizeof(opt));
 	parse_flags(argc, argv);
 	if (optind >= argc) usage(EINVAL);
 	if (opt.Zero_separator) entry_separator = 0;
@@ -69,18 +69,11 @@ int main(int argc, char * argv[])
 	prepare_internals();
 
 	for (int i = optind; i < argc; i++) {
-		process_arg(argv[i]);
 		devroot_seal = 0;
+		process_arg(argv[i]);
 	}
 
 	return 0;
-}
-
-static void init_opts(void)
-{
-	memset(&opt, 0, sizeof(opt));
-
-	if (getenv("POSIXLY_CORRECT")) opt.posix = 1;
 }
 
 static void parse_flags(int argc, char * argv[])
@@ -92,19 +85,19 @@ static void parse_flags(int argc, char * argv[])
 			usage(0);
 			break;
 		case 'q':
-			if (opt.posix && opt.Quiet) break;
-			opt.Quiet = 1;
+			if (opt.Quiet > 3) break;
+			opt.Quiet++;
 			continue;
-		case 's':
-			if (opt.posix && opt.Silent) break;
-			opt.Silent = 1;
+		case 'v':
+			if (opt.Verbose > 3) break;
+			opt.Verbose++;
 			continue;
 		case 'x':
-			if (opt.posix && opt.Xdev) break;
+			if (opt.Xdev) break;
 			opt.Xdev = 1;
 			continue;
 		case 'z':
-			if (opt.posix && opt.Zero_separator) break;
+			if (opt.Zero_separator) break;
 			opt.Zero_separator = 1;
 			continue;
 		}
@@ -180,7 +173,12 @@ static void process_file(dev_t dev, ino_t ino, char * name, uint32_t name_len)
 {
 	UHASH_IDX_T i_seen = UHASH_CALL(uh0, search, &devroot, dev);
 	if (!i_seen) {
-		if (devroot_seal) return;
+		if (devroot_seal) {
+			if (!opt.Verbose) return;
+
+			fprintf(stderr, "cross-filesystem boundary violation: %.*s\n", name_len, name);
+			return;
+		}
 
 		i_seen = UHASH_CALL(uh0, insert, &devroot, dev, &empty_seen);
 		devroot_seal = opt.Xdev;
@@ -219,7 +217,12 @@ static void process_dir(dev_t dev, ino_t ino, char * name, uint32_t name_len)
 {
 	UHASH_IDX_T i_seen = UHASH_CALL(uh0, search, &devroot, dev);
 	if (!i_seen) {
-		if (devroot_seal) return;
+		if (devroot_seal) {
+			if (!opt.Verbose) return;
+
+			fprintf(stderr, "cross-filesystem boundary violation: %.*s\n", name_len, name);
+			return;
+		}
 
 		i_seen = UHASH_CALL(uh0, insert, &devroot, dev, &empty_seen);
 		devroot_seal = opt.Xdev;
@@ -323,7 +326,7 @@ static int handle_file_type(uint32_t type, const char * arg, const char * dir, u
 
 	if (!e_type) return 1;
 
-	if (opt.Quiet) return 0;
+	if (!opt.Verbose) return 0;
 
 	if (dir) {
 		fprintf(stderr, "%.*s: can't handle <%s>, skipping %s\n", dir_len, dir, e_type, arg);
@@ -348,7 +351,7 @@ static uint32_t resolve_fd(int fd, char * buffer, uint32_t buffer_size)
 
 static void dump_error(int error_num, const char * where)
 {
-	if (opt.Silent) return;
+	if (opt.Quiet) return;
 
 	char        * e_str = NULL;
 	static char   e_buf[4096];
@@ -360,7 +363,7 @@ static void dump_error(int error_num, const char * where)
 
 static void dump_path_error(int error_num, const char * where, const char * name)
 {
-	if (opt.Silent) return;
+	if (opt.Quiet) return;
 
 	char        * e_str = NULL;
 	static char   e_buf[4096 + sizeof(path)];
