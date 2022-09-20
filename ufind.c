@@ -20,7 +20,7 @@
 
 #include "include/uhash/uhash.h"
 
-#define UFIND_OPTS "hqsz"
+#define UFIND_OPTS "hqsxz"
 
 static void usage(int retcode)
 {
@@ -30,6 +30,7 @@ static void usage(int retcode)
 	" -h  - help (show this message)\n"
 	" -q  - quiet (don't print information messages in stderr)\n"
 	" -s  - silent (don't print error messages in stderr)\n"
+	" -x  - [no] cross-dev (skip entries on different file systems)\n"
 	" -z  - zero-separator (separate entries with \\0 instead of \\n)\n"
 	, stderr);
 
@@ -40,11 +41,13 @@ static struct {
 	int posix
 	,	Quiet
 	,	Silent
+	,	Xdev
 	,	Zero_separator
 	;
 } opt;
 
 static char entry_separator = '\n';
+static int devroot_seal = 0;
 
 static void init_opts(void);
 static void parse_flags(int argc, char * argv[]);
@@ -67,6 +70,7 @@ int main(int argc, char * argv[])
 
 	for (int i = optind; i < argc; i++) {
 		process_arg(argv[i]);
+		devroot_seal = 0;
 	}
 
 	return 0;
@@ -94,6 +98,10 @@ static void parse_flags(int argc, char * argv[])
 		case 's':
 			if (opt.posix && opt.Silent) break;
 			opt.Silent = 1;
+			continue;
+		case 'x':
+			if (opt.posix && opt.Xdev) break;
+			opt.Xdev = 1;
 			continue;
 		case 'z':
 			if (opt.posix && opt.Zero_separator) break;
@@ -171,8 +179,12 @@ process_arg__close:
 static void process_file(dev_t dev, ino_t ino, char * name, uint32_t name_len)
 {
 	UHASH_IDX_T i_seen = UHASH_CALL(uh0, search, &devroot, dev);
-	if (!i_seen)
+	if (!i_seen) {
+		if (devroot_seal) return;
+
 		i_seen = UHASH_CALL(uh0, insert, &devroot, dev, &empty_seen);
+		devroot_seal = opt.Xdev;
+	}
 
 	seen_t * p_seen = (seen_t *) UHASH_CALL(uh0, value, &devroot, i_seen);
 	UHASH_IDX_T i_ino = UHASH_CALL(uh1, search, &(p_seen->file), ino);
@@ -206,8 +218,12 @@ static CC_FORCE_INLINE int filter_out_dots(const struct dirent * entry)
 static void process_dir(dev_t dev, ino_t ino, char * name, uint32_t name_len)
 {
 	UHASH_IDX_T i_seen = UHASH_CALL(uh0, search, &devroot, dev);
-	if (!i_seen)
+	if (!i_seen) {
+		if (devroot_seal) return;
+
 		i_seen = UHASH_CALL(uh0, insert, &devroot, dev, &empty_seen);
+		devroot_seal = opt.Xdev;
+	}
 
 	seen_t * p_seen = (seen_t *) UHASH_CALL(uh0, value, &devroot, i_seen);
 	UHASH_IDX_T i_ino = UHASH_CALL(uh1, search, &(p_seen->dir), ino);
