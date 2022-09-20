@@ -53,6 +53,7 @@ static void parse_flags(int argc, char * argv[]);
 
 static void prepare_internals(void);
 static void process_arg(const char * arg);
+static void debug_print_devroot(void);
 
 int main(int argc, char * argv[])
 {
@@ -72,6 +73,8 @@ int main(int argc, char * argv[])
 		devroot_seal = 0;
 		process_arg(argv[i]);
 	}
+
+	if (opt.Verbose > 1) debug_print_devroot();
 
 	return 0;
 }
@@ -149,7 +152,6 @@ static void process_arg(const char * name)
 
 	char tname[sizeof(path)];
 
-	memset(tname, 0, sizeof(tname));
 	uint32_t tname_len = resolve_fd(f_fd, tname, sizeof(tname));
 	if (!tname_len) {
 		goto process_arg__close;
@@ -345,6 +347,8 @@ static uint32_t resolve_fd(int fd, char * buffer, uint32_t buffer_size)
 	if (result < 0) {
 		dump_error(errno, "resolve_fd:readlink(2)");
 		return 0;
+	} else {
+		buffer[result] = 0;
 	}
 	return result;
 }
@@ -371,4 +375,33 @@ static void dump_path_error(int error_num, const char * where, const char * name
 	memset(&e_buf, 0, sizeof(e_buf));
 	e_str = strerror_r(error_num, e_buf, sizeof(e_buf) - 1);
 	fprintf(stderr, "%s path '%s' error %d: %s\n", where, name, error_num, e_str);
+}
+
+static void debug_print_uh0_node(unsigned int index, const uhash_uh0_node * v, void * state)
+{
+	const uh0 * h = (const uh0 *) state;
+	const seen_t * s = UHASH_CALL(uh0, value, h, v->value);
+
+	index += 1;
+
+	if (s) {
+		fprintf(stderr, "#  %c [%u]: Key %lu File: %u/%u Dir: %u/%u\n",
+		                (h->tree_root == index) ? '>' : ' ', index, v->key,
+		                s->file.nodes.used, s->file.nodes.allocated,
+		                s->dir.nodes.used, s->dir.nodes.allocated);
+	} else {
+		fprintf(stderr, "#  %c [%u]: Key %lu\n <no data>\n",
+		                (h->tree_root == index) ? '>' : ' ', index, v->key);
+	}
+}
+
+static void debug_print_devroot(void)
+{
+	fprintf(stderr, "# devroot:\n");
+	fprintf(stderr, "#  Nodes: %u/%u Values: %u/%u\n",
+	                devroot.nodes.used, devroot.nodes.allocated,
+	                devroot.values.used, devroot.values.allocated);
+	fprintf(stderr, "#  Items: [\n");
+	UHASH_VCALL(uh0, v_node, const_walk_ex, &(devroot.nodes), debug_print_uh0_node, (void *) &devroot);
+	fprintf(stderr, "#  ]\n");
 }
