@@ -30,7 +30,7 @@ static void usage(int retcode)
 	" -h  - help (show this message)\n"
 	" -q  - quiet (don't print error messages in stderr)\n"
 	" -v  - verbose (print information messages in stderr)\n"
-	" -x  - [no] cross-dev (skip entries on different file systems)\n"
+	" -x  - [no] cross dev/fs (skip entries on different file systems)\n"
 	" -z  - zero-separator (separate entries with \\0 instead of \\n)\n"
 	, stderr);
 
@@ -179,7 +179,7 @@ static void process_file(dev_t dev, ino_t ino, char * name, uint32_t name_len)
 		if (devroot_seal) {
 			if (!opt.Verbose) return;
 
-			fprintf(stderr, "cross-filesystem boundary violation: %.*s\n", name_len, name);
+			fprintf(stderr, "filesystem boundary violation: %.*s\n", name_len, name);
 			return;
 		}
 
@@ -223,7 +223,7 @@ static void process_dir(dev_t dev, ino_t ino, char * name, uint32_t name_len)
 		if (devroot_seal) {
 			if (!opt.Verbose) return;
 
-			fprintf(stderr, "cross-filesystem boundary violation: %.*s\n", name_len, name);
+			fprintf(stderr, "filesystem boundary violation: %.*s\n", name_len, name);
 			return;
 		}
 
@@ -332,9 +332,9 @@ static int handle_file_type(uint32_t type, const char * arg, const char * dir, u
 	if (!opt.Verbose) return 0;
 
 	if (dir) {
-		fprintf(stderr, "%.*s: can't handle <%s>, skipping %s\n", dir_len, dir, e_type, arg);
+		fprintf(stderr, "%.*s: won't handle <%s>, skipping %s\n", dir_len, dir, e_type, arg);
 	} else {
-		fprintf(stderr, "can't handle <%s>, skipping %s\n", e_type, arg);
+		fprintf(stderr, "won't handle <%s>, skipping %s\n", e_type, arg);
 	}
 	return 0;
 }
