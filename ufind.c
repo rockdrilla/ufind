@@ -112,12 +112,12 @@ static void parse_flags(int argc, char * argv[])
 
 typedef struct { char path[4096]; } path;
 
-UHASH_DEFINE_TYPE0(uh1, ino_t);
+UHASH_DEFINE_TYPE0(uh1, ino_t)
 typedef struct { uh1 dir, file; } seen_t;
-UHASH_DEFINE_TYPE2(uh0, dev_t, seen_t);
+UHASH_DEFINE_TYPE2(uh0, dev_t, seen_t)
 
-UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(dev_t);
-UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(ino_t);
+UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(dev_t)
+UHASH_DEFINE_DEFAULT_KEY_COMPARATOR(ino_t)
 
 static seen_t  empty_seen;
 static uh0     devroot;
