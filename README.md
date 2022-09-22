@@ -117,42 +117,37 @@ As seen, output MAY be totally unsorted and a bit confusing:
 $ ./benchmark.sh
 # compare numbers from different utilities:
 
-find /usr/bin/: 4012
-./ufind-terse.sh /usr/bin/: 3327
-./ufind /usr/bin/: 3327
-fdfind -u -j 1 . /usr/bin/: 4011
-fdfind -u . /usr/bin/: 4011
+find /usr/bin/: 4185
+./ufind-terse.sh /usr/bin/: 3474
+./ufind -q /usr/bin/: 3474
+fdfind -u . /usr/bin/: 4184
 
 # compare performance:
 
 Benchmark 1: find /usr/share
-  Time (mean ± σ):     158.1 ms ±   6.1 ms    [User: 38.0 ms, System: 119.9 ms]
-  Range (min … max):   151.5 ms … 168.1 ms    30 runs
+  Time (mean ± σ):     158.3 ms ±   6.0 ms    [User: 39.8 ms, System: 118.1 ms]
+  Range (min … max):   149.9 ms … 170.9 ms    40 runs
 
 Benchmark 1: ./ufind-terse.sh /usr/share
-  Time (abs ≡):         2.522 s               [User: 2.516 s, System: 0.451 s]
+  Time (abs ≡):         2.516 s               [User: 2.561 s, System: 0.408 s]
 
-Benchmark 1: ./ufind /usr/share
-  Time (mean ± σ):     365.5 ms ±  15.5 ms    [User: 177.6 ms, System: 187.5 ms]
-  Range (min … max):   347.8 ms … 391.5 ms    30 runs
+Benchmark 1: ./ufind -q /usr/share
+  Time (mean ± σ):     334.1 ms ±  11.1 ms    [User: 147.6 ms, System: 186.1 ms]
+  Range (min … max):   328.0 ms … 363.0 ms    40 runs
 
 # run ufind with env MALLOC_ARENA_MAX=2:
-Benchmark 1: ./ufind /usr/share
-  Time (mean ± σ):     357.9 ms ±  14.1 ms    [User: 172.9 ms, System: 184.7 ms]
-  Range (min … max):   348.5 ms … 387.1 ms    30 runs
+Benchmark 1: ./ufind -q /usr/share
+  Time (mean ± σ):     338.8 ms ±  14.0 ms    [User: 152.5 ms, System: 185.7 ms]
+  Range (min … max):   327.3 ms … 366.1 ms    40 runs
 
 # run ufind with env MALLOC_ARENA_MAX=1:
-Benchmark 1: ./ufind /usr/share
-  Time (mean ± σ):     354.0 ms ±  10.9 ms    [User: 177.9 ms, System: 175.9 ms]
-  Range (min … max):   348.0 ms … 385.3 ms    30 runs
+Benchmark 1: ./ufind -q /usr/share
+  Time (mean ± σ):     342.7 ms ±  15.1 ms    [User: 164.0 ms, System: 178.1 ms]
+  Range (min … max):   327.4 ms … 365.8 ms    40 runs
 
 Benchmark 1: fdfind -u -j 1 . /usr/share
-  Time (mean ± σ):     230.2 ms ±   4.0 ms    [User: 175.1 ms, System: 134.3 ms]
-  Range (min … max):   224.7 ms … 239.1 ms    30 runs
-
-Benchmark 1: fdfind -u . /usr/share
-  Time (mean ± σ):     110.2 ms ±   4.2 ms    [User: 449.8 ms, System: 816.9 ms]
-  Range (min … max):   106.2 ms … 125.6 ms    30 runs
+  Time (mean ± σ):     227.8 ms ±   4.0 ms    [User: 174.6 ms, System: 132.2 ms]
+  Range (min … max):   222.0 ms … 240.7 ms    40 runs
 ```
 
 ## Building from source:

@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+export MALLOC_ARENA_MAX=8
+
 deep_cave="${1:-/usr/share}"
 test_cave="${2:-/usr/bin}"
 
@@ -14,16 +16,12 @@ echo
 
 ## kind of warmup
 simple_test find
-
 simple_test ./ufind-terse.sh
-
-simple_test ./ufind
-
-simple_test fdfind -u -j 1 .
+simple_test ./ufind -q
 simple_test fdfind -u .
 
 hyper_test() {
-    hyperfine -m "${RUNS:-30}" -M "${RUNS:-60}" -N "$* ${deep_cave}"
+    hyperfine -m "${RUNS:-40}" -M "${RUNS:-40}" -N "$* ${deep_cave}"
 }
 
 echo
@@ -34,13 +32,12 @@ hyper_test find
 
 RUNS=1 hyper_test ./ufind-terse.sh
 
-hyper_test ./ufind
+hyper_test ./ufind -q
 
 echo "# run ufind with env MALLOC_ARENA_MAX=2:"
-MALLOC_ARENA_MAX=2 hyper_test ./ufind
+MALLOC_ARENA_MAX=2 hyper_test ./ufind -q
 
 echo "# run ufind with env MALLOC_ARENA_MAX=1:"
-MALLOC_ARENA_MAX=1 hyper_test ./ufind
+MALLOC_ARENA_MAX=1 hyper_test ./ufind -q
 
 hyper_test fdfind -u -j 1 .
-hyper_test fdfind -u .
