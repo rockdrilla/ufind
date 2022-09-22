@@ -49,7 +49,7 @@ static struct {
 static char entry_separator = '\n';
 static uint8_t devroot_seal = 0;
 
-static void parse_flags(int argc, char * argv[]);
+static void parse_opts(int argc, char * argv[]);
 
 static void prepare_internals(void);
 static void process_arg(const char * arg);
@@ -57,12 +57,9 @@ static void debug_print_devroot(void);
 
 int main(int argc, char * argv[])
 {
-	if (argc < 2) {
-		usage(0);
-		return 0;
-	}
+	if (argc < 2) usage(0);
 
-	parse_flags(argc, argv);
+	parse_opts(argc, argv);
 	prepare_internals();
 
 	for (int i = optind; i < argc; i++) {
@@ -75,12 +72,12 @@ int main(int argc, char * argv[])
 	return 0;
 }
 
-static void parse_flags(int argc, char * argv[])
+static void parse_opts(int argc, char * argv[])
 {
 	memset(&opt, 0, sizeof(opt));
 
 	int o;
-	while ((o = getopt(argc, argv, UFIND_OPTS)) != -1) {
+	while ((o = getopt(argc, (char * const *) argv, UFIND_OPTS)) != -1) {
 		switch (o) {
 		case 'h':
 			usage(0);
