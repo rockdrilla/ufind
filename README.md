@@ -83,13 +83,16 @@ As seen, output MAY be totally unsorted and a bit confusing:
 
 ## Usage:
 
-`ufind [-z] <path> [..<path>]`
+`ufind [-qvxz] <path> [..<path>]`
 
 ### Options:
 
-| Option | Description                            |
-| ------ | -------------------------------------- |
-|  `-z`  | separate entries with \0 instead of \n |
+| Option | Description                                                             |
+| ------ | ----------------------------------------------------------------------- |
+|  `-q`  | don't print error messages in `stderr`                                  |
+|  `-v`  | print information messages in `stderr` (specify twice for debug output) |
+|  `-x`  | skip entries on different file systems (sort of `find -xdev`)           |
+|  `-z`  | separate entries with \0 instead of \n                                  |
 
 ## Pros:
 
@@ -98,7 +101,7 @@ As seen, output MAY be totally unsorted and a bit confusing:
 
 ```sh
   $ stat -Lc $'%s\t%n' ufind /usr/bin/fdfind
-  31104   ufind
+  35448   ufind
   2501320 /usr/bin/fdfind
 ```
 
