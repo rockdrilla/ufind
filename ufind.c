@@ -50,8 +50,7 @@ static char entry_separator = '\n';
 static uint8_t devroot_seal = 0;
 
 static void parse_opts(int argc, char * argv[]);
-
-static void prepare_internals(void);
+static void prepare(void);
 static void process_arg(const char * arg);
 static void debug_print_devroot(void);
 
@@ -60,7 +59,7 @@ int main(int argc, char * argv[])
 	if (argc < 2) usage(0);
 
 	parse_opts(argc, argv);
-	prepare_internals();
+	prepare();
 
 	for (int i = optind; i < argc; i++) {
 		devroot_seal = 0;
@@ -297,7 +296,7 @@ static int seen_t__dtor(seen_t * s)
 	return 0;
 }
 
-static void prepare_internals(void)
+static void prepare(void)
 {
 	UHASH_CALL(uh0, init, &devroot);
 	UHASH_SET_DEFAULT_KEY_COMPARATOR(&devroot, dev_t);
