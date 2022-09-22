@@ -172,26 +172,39 @@ process_arg__close:
 	return;
 }
 
-static void process_file(dev_t dev, ino_t ino, char * name, uint32_t name_len)
+static inline seen_t * process_dev(dev_t dev, const char * name, uint32_t name_len)
 {
-	UHASH_IDX_T i_seen = UHASH_CALL(uh0, search, &devroot, dev);
-	if (!i_seen) {
-		if (devroot_seal) {
-			if (!opt.Verbose) return;
+	UHASH_IDX_T i_seen = 0;
+	while (1) {
+		if (!devroot_seal) break;
 
+		i_seen = UHASH_CALL(uh0, search, &devroot, dev);
+		if (i_seen) break;
+
+		if (opt.Verbose)
 			fprintf(stderr, "filesystem boundary violation: %.*s\n", name_len, name);
-			return;
-		}
-
-		i_seen = UHASH_CALL(uh0, insert, &devroot, dev, &empty_seen);
-		devroot_seal = opt.Xdev;
+		return NULL;
 	}
 
-	seen_t * p_seen = (seen_t *) UHASH_CALL(uh0, value, &devroot, i_seen);
-	UHASH_IDX_T i_ino = UHASH_CALL(uh1, search, &(p_seen->file), ino);
-	if (i_ino) return;
+	devroot_seal = opt.Xdev;
+	if (!i_seen) i_seen = UHASH_CALL(uh0, search, &devroot, dev);
+	if (!i_seen) i_seen = UHASH_CALL(uh0, insert, &devroot, dev, &empty_seen);
 
-	UHASH_CALL(uh1, insert, &(p_seen->file), ino);
+	if (!i_seen) {
+		if (!opt.Quiet)
+			fprintf(stderr, "error while inserting dev_t %lu for: %.*s\n", dev, name_len, name);
+		return NULL;
+	}
+
+	return (seen_t *) UHASH_CALL(uh0, value, &devroot, i_seen);
+}
+
+static void process_file(dev_t dev, ino_t ino, char * name, uint32_t name_len)
+{
+	seen_t * p_seen = process_dev(dev, name, name_len);
+	if (!p_seen) return;
+	UHASH_IDX_T i_ino = UHASH_CALL(uh1, insert_strict, &(p_seen->file), ino);
+	if (!i_ino) return;
 
 	// fputs(name, stdout);
 	// fputc(entry_separator, stdout);
@@ -218,24 +231,10 @@ static CC_FORCE_INLINE int filter_out_dots(const struct dirent * entry)
 
 static void process_dir(dev_t dev, ino_t ino, char * name, uint32_t name_len)
 {
-	UHASH_IDX_T i_seen = UHASH_CALL(uh0, search, &devroot, dev);
-	if (!i_seen) {
-		if (devroot_seal) {
-			if (!opt.Verbose) return;
-
-			fprintf(stderr, "filesystem boundary violation: %.*s\n", name_len, name);
-			return;
-		}
-
-		i_seen = UHASH_CALL(uh0, insert, &devroot, dev, &empty_seen);
-		devroot_seal = opt.Xdev;
-	}
-
-	seen_t * p_seen = (seen_t *) UHASH_CALL(uh0, value, &devroot, i_seen);
-	UHASH_IDX_T i_ino = UHASH_CALL(uh1, search, &(p_seen->dir), ino);
-	if (i_ino) return;
-
-	UHASH_CALL(uh1, insert, &(p_seen->dir), ino);
+	seen_t * p_seen = process_dev(dev, name, name_len);
+	if (!p_seen) return;
+	UHASH_IDX_T i_ino = UHASH_CALL(uh1, insert_strict, &(p_seen->dir), ino);
+	if (!i_ino) return;
 
 	DIR * d = opendir(name);
 	if (!d) {
