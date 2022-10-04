@@ -4,7 +4,7 @@
 
 `ufind` is small supplemental utility for [minimal Debian container image](https://github.com/rockdrilla/docker-debian) (*work in progress*) and mostly useful for building container images (`RUN <...>` stanzas in `Dockerfile`/`Containerfile`).
 
-Program is kinda *dumb* so feel free to open issue/PR. :)
+If you have problems with it then feel free to open the issue/PR. :)
 
 ---
 
