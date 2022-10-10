@@ -27,7 +27,7 @@
 static void usage(int retcode)
 {
 	fputs(
-	"ufind 0.4.3\n"
+	"ufind 0.4.4\n"
 	"Usage: ufind [-" UFIND_OPTS "] <path> [..<path>]\n"
 	" -h  - help (show this message)\n"
 	" -q  - quiet (don't print error messages in stderr)\n"
