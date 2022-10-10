@@ -18,6 +18,8 @@
 
 #include <sys/stat.h>
 
+#include "include/io/const.h"
+#include "include/procfs/fd2name.h"
 #include "include/uhash/uhash.h"
 
 #define UFIND_OPTS "hqvxz"
@@ -106,8 +108,6 @@ static void parse_opts(int argc, char * argv[])
 	if (opt.Zero_separator) entry_separator = 0;
 }
 
-typedef struct { char path[4096]; } path;
-
 UHASH_DEFINE_TYPE0(uh1, ino_t)
 typedef struct { uh1 dir, file; } seen_t;
 UHASH_DEFINE_TYPE2(uh0, dev_t, seen_t)
@@ -125,7 +125,6 @@ static void process_file(dev_t dev, ino_t ino, char * name, uint32_t name_len);
 static void process_dir(dev_t dev, ino_t ino, char * name, uint32_t name_len);
 
 static int handle_file_type(uint32_t type, const char * arg, const char * dir, uint32_t dir_len);
-static uint32_t resolve_fd(int fd, char * buffer, uint32_t buffer_size);
 
 static void process_arg(const char * name)
 {
@@ -147,10 +146,11 @@ static void process_arg(const char * name)
 		goto process_arg__close;
 	}
 
-	char tname[sizeof(path)];
+	char tname[PATH_MAX];
 
-	uint32_t tname_len = resolve_fd(f_fd, tname, sizeof(tname));
+	uint32_t tname_len = procfs_fd2name(f_fd, tname, sizeof(tname));
 	if (!tname_len) {
+		dump_error(errno, "process_arg:readlink(2)");
 		goto process_arg__close;
 	}
 
@@ -243,7 +243,7 @@ static void process_dir(dev_t dev, ino_t ino, char * name, uint32_t name_len)
 		name_len++;
 	}
 
-	char tname[sizeof(path)];
+	char tname[PATH_MAX];
 
 	struct dirent * dent;
 	uint32_t dname_len, tname_len;
@@ -334,30 +334,14 @@ static int handle_file_type(uint32_t type, const char * arg, const char * dir, u
 	return 0;
 }
 
-static uint32_t resolve_fd(int fd, char * buffer, uint32_t buffer_size)
-{
-	static char proc_link[48];
-
-	snprintf(proc_link, sizeof(proc_link), "/proc/self/fd/%d", fd);
-	ssize_t result = readlink(proc_link, buffer, buffer_size - 1);
-	if (result < 0) {
-		dump_error(errno, "resolve_fd:readlink(2)");
-		return 0;
-	} else {
-		buffer[result] = 0;
-	}
-	return result;
-}
+static char e_buf[1024 + PATH_MAX];
 
 static void dump_error(int error_num, const char * where)
 {
 	if (opt.Quiet) return;
 
-	char        * e_str = NULL;
-	static char   e_buf[4096];
-
 	memset(&e_buf, 0, sizeof(e_buf));
-	e_str = strerror_r(error_num, e_buf, sizeof(e_buf) - 1);
+	char * e_str = strerror_r(error_num, e_buf, sizeof(e_buf) - 1);
 	fprintf(stderr, "%s error %d: %s\n", where, error_num, e_str);
 }
 
@@ -365,11 +349,8 @@ static void dump_path_error(int error_num, const char * where, const char * name
 {
 	if (opt.Quiet) return;
 
-	char        * e_str = NULL;
-	static char   e_buf[4096 + sizeof(path)];
-
 	memset(&e_buf, 0, sizeof(e_buf));
-	e_str = strerror_r(error_num, e_buf, sizeof(e_buf) - 1);
+	char * e_str = strerror_r(error_num, e_buf, sizeof(e_buf) - 1);
 	fprintf(stderr, "%s path '%s' error %d: %s\n", where, name, error_num, e_str);
 }
 
