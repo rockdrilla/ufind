@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 
 #include "include/io/const.h"
+#include "include/io/log-stderr.h"
 #include "include/procfs/fd2name.h"
 #include "include/uhash/uhash.h"
 
@@ -334,24 +335,18 @@ static int handle_file_type(uint32_t type, const char * arg, const char * dir, u
 	return 0;
 }
 
-static char e_buf[1024 + PATH_MAX];
-
 static void dump_error(int error_num, const char * where)
 {
 	if (opt.Quiet) return;
 
-	memset(&e_buf, 0, sizeof(e_buf));
-	char * e_str = strerror_r(error_num, e_buf, sizeof(e_buf) - 1);
-	fprintf(stderr, "%s error %d: %s\n", where, error_num, e_str);
+	log_stderr_error_ex("ufind:", error_num, "%s", where);
 }
 
 static void dump_path_error(int error_num, const char * where, const char * name)
 {
 	if (opt.Quiet) return;
 
-	memset(&e_buf, 0, sizeof(e_buf));
-	char * e_str = strerror_r(error_num, e_buf, sizeof(e_buf) - 1);
-	fprintf(stderr, "%s path '%s' error %d: %s\n", where, name, error_num, e_str);
+	log_stderr_path_error_ex("ufind:", name, error_num, "%s", where);
 }
 
 static void debug_print_uh0_node(unsigned int index, const uhash_uh0_node * v, void * state)
